@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
@@ -17,6 +18,8 @@ const navItems = [
 export function Navbar() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-surface/80 backdrop-blur-xl">
@@ -57,7 +60,7 @@ export function Navbar() {
             className="rounded-xl p-2 text-muted transition-colors hover:bg-surface2 hover:text-white"
             aria-label="Toggle theme"
           >
-            {theme === 'dark' ? (
+            {mounted && theme === 'dark' ? (
               <Sun className="h-4 w-4" />
             ) : (
               <Moon className="h-4 w-4" />
