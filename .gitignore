@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.next/
+out/
+
+# Environment files — never commit secrets
+.env
+.env.local
+.env.*.local
+
+# SQLite databases
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Downloaded media files
+backend/downloads/
+/downloads/
+
+# Test artifacts
+coverage/
+playwright-report/
+test-results/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+
+# yt-dlp binary (installed separately)
+yt-dlp
+yt-dlp.exe
+
+# Misc
+*.cookies
+.turbo
