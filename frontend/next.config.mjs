@@ -1,31 +1,41 @@
+const BACKEND = process.env.BACKEND_URL || 'http://localhost:4000';
+
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+
+  // Allow Next.js dev server to accept requests coming through the ngrok tunnel
+  allowedDevOrigins: [
+    'ungloved-graves-ladies.ngrok-free.dev',
+    '*.ngrok-free.app',
+    '*.ngrok.io',
+  ],
+
+  // Proxy /api/* to the Fastify backend — lets a single ngrok URL serve both frontend and API
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${BACKEND}/api/:path*`,
+      },
+    ];
+  },
+
   images: {
     remotePatterns: [
-      // YouTube thumbnails
       { protocol: 'https', hostname: 'i.ytimg.com' },
       { protocol: 'https', hostname: 'img.youtube.com' },
-      // YouTube shortened thumbnails
       { protocol: 'https', hostname: '*.googleusercontent.com' },
-      // Vimeo
       { protocol: 'https', hostname: 'i.vimeocdn.com' },
       { protocol: 'https', hostname: 'f.vimeocdn.com' },
-      // Twitter / X
       { protocol: 'https', hostname: 'pbs.twimg.com' },
-      // Instagram / Facebook
       { protocol: 'https', hostname: '*.cdninstagram.com' },
       { protocol: 'https', hostname: '*.fbcdn.net' },
-      // Reddit
       { protocol: 'https', hostname: '*.redd.it' },
       { protocol: 'https', hostname: 'preview.redd.it' },
-      // TikTok
       { protocol: 'https', hostname: '*.tiktokcdn.com' },
-      // Twitch
       { protocol: 'https', hostname: 'static-cdn.jtvnw.net' },
-      // SoundCloud
       { protocol: 'https', hostname: 'i1.sndcdn.com' },
-      // Generic fallback for any https thumbnail
       { protocol: 'https', hostname: '**' },
     ],
   },

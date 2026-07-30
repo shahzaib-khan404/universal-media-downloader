@@ -95,8 +95,9 @@ export default function DownloadProgressPage() {
     }
 
     // Real job — connect to SSE stream
-    const API = process.env.NEXT_PUBLIC_API_URL ?? '';
-    const source = new EventSource(`${API}/api/downloads/${jobId}/events`);
+    // ngrok-skip-browser-warning passed as query param because EventSource can't set headers
+    const base = process.env.NEXT_PUBLIC_API_URL ?? '';
+    const source = new EventSource(`${base}/api/downloads/${jobId}/events?ngrok-skip-browser-warning=true`);
 
     source.onmessage = (e: MessageEvent) => {
       try {
