@@ -88,25 +88,21 @@ export async function fetchAllMediaData(sourceUrl: string): Promise<{
   qualities: QualityOption[];
   audioOptions: AudioOption[];
 }> {
-  try {
-    const data = await apiPost<MetadataResponse>('/downloads/metadata', { url: sourceUrl });
-    const media: MediaInfo = {
-      id: data.id,
-      url: sourceUrl,
-      title: data.title,
-      thumbnail: data.thumbnail,
-      platform: data.platform,
-      duration: String(data.duration),
-      views: data.views,
-      uploadedAt: data.uploadedAt ?? '',
-      channel: data.channel,
-      subscribers: null,
-      description: null,
-    };
-    return { media, qualities: data.quality, audioOptions: data.audio };
-  } catch {
-    return { media: { ...MOCK_MEDIA, url: sourceUrl }, qualities: MOCK_QUALITIES, audioOptions: MOCK_AUDIO };
-  }
+  const data = await apiPost<MetadataResponse>('/downloads/metadata', { url: sourceUrl });
+  const media: MediaInfo = {
+    id: data.id,
+    url: sourceUrl,
+    title: data.title,
+    thumbnail: data.thumbnail,
+    platform: data.platform,
+    duration: String(data.duration),
+    views: data.views,
+    uploadedAt: data.uploadedAt ?? '',
+    channel: data.channel,
+    subscribers: null,
+    description: null,
+  };
+  return { media, qualities: data.quality, audioOptions: data.audio };
 }
 
 // Kept for backward compat with options page (calls both)

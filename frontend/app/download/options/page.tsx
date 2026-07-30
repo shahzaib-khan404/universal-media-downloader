@@ -19,16 +19,22 @@ export default function DownloadOptionsPage() {
   const [qualities, setQualities] = useState<QualityOption[]>([]);
   const [audioOptions, setAudioOptions] = useState<AudioOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!sourceUrl) return;
     setLoading(true);
+    setFetchError(null);
     fetchAllMediaData(sourceUrl)
       .then(({ media, qualities, audioOptions }) => {
         setMedia(media);
         setQualities(qualities);
         setAudioOptions(audioOptions);
+      })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        setFetchError(msg);
       })
       .finally(() => setLoading(false));
   }, [sourceUrl]);
@@ -62,7 +68,24 @@ export default function DownloadOptionsPage() {
           </p>
         </div>
 
-        {loading ? (
+        {fetchError ? (
+          <div className="rounded-3xl border border-red-500/30 bg-red-500/10 p-8 text-center">
+            <p className="text-lg font-semibold text-red-400">Could not fetch video info</p>
+            <p className="mt-2 text-sm text-muted">
+              {fetchError.includes('429') || fetchError.includes('bot')
+                ? 'YouTube is blocking requests from this server. Try a different video or wait a few minutes.'
+                : fetchError.includes('Sign in')
+                ? 'This video requires sign-in to access. Try a public video.'
+                : 'Something went wrong fetching the video. Make sure the URL is correct and the video is public.'}
+            </p>
+            <button
+              onClick={() => window.history.back()}
+              className="mt-6 rounded-full border border-border px-5 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-white"
+            >
+              ← Go back
+            </button>
+          </div>
+        ) : loading ? (
           <div className="space-y-6">
             {/* Media skeleton */}
             <div className="animate-pulse rounded-3xl border border-border bg-surface p-6">
