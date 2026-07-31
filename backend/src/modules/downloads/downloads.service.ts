@@ -63,24 +63,33 @@ export const downloadsService = {
         return true;
       })
       .slice(0, 6)
-      .map((f) => ({
-        // Encode "formatId:height:hasAudio" so the worker can use height-based
-        // selection for combined streams (Instagram, Facebook) without needing
-        // a separate schema field.
-        id: `${f.format_id}:${f.height ?? 0}:${f.acodec && f.acodec !== 'none' ? '1' : '0'}`,
-        label: `${f.height}p`,
-        resolution: `${f.width ?? '?'}×${f.height}`,
-        codec: f.vcodec ?? 'unknown',
-        fps: f.fps ? `${f.fps} fps` : undefined,
-        container: f.ext,
-        estimatedSize: f.filesize
-          ? `${(f.filesize / 1024 / 1024).toFixed(0)} MB`
-          : f.filesize_approx
-          ? `~${(f.filesize_approx / 1024 / 1024).toFixed(0)} MB`
-          : 'unknown',
-        features: [f.format_note ?? '', (f.height ?? 0) >= 2160 ? '4K' : (f.height ?? 0) >= 1080 ? 'HD' : 'SD'].filter(Boolean),
-        recommended: f.height === 1080,
-      }));
+      .map((f) => {
+        const h = f.height ?? 0;
+        // Honest resolution tier based on actual pixel height.
+        // format_note from yt-dlp is platform-specific (e.g. "2K", "Premium",
+        // "DASH") and frequently does not match the downloaded output — omitted.
+        const tier =
+          h >= 4320 ? '8K' :
+          h >= 2160 ? '4K UHD' :
+          h >= 1440 ? 'QHD' :
+          h >= 1080 ? 'Full HD' :
+          h >= 720  ? 'HD' : 'SD';
+        return {
+          id: `${f.format_id}:${h}:${f.acodec && f.acodec !== 'none' ? '1' : '0'}`,
+          label: `${h}p`,
+          resolution: `${f.width ?? '?'}×${h}`,
+          codec: f.vcodec ?? 'unknown',
+          fps: f.fps ? `${f.fps} fps` : undefined,
+          container: f.ext,
+          // estimatedSize is intentionally omitted: the value yt-dlp provides
+          // is for the video-only DASH stream before audio is merged. With our
+          // multi-format fallback chain the actual merged file can differ by
+          // 5–10× — showing it would mislead users.
+          estimatedSize: null,
+          features: [tier],
+          recommended: h === 1080,
+        };
+      });
 
     const audioFormats = formats
       .filter((f) => f.acodec && f.acodec !== 'none' && (!f.vcodec || f.vcodec === 'none'))

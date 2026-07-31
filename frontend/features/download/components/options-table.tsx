@@ -64,7 +64,6 @@ export function OptionsTable({ qualities, audioOptions, onDownload, loading }: O
                     <span>{q.codec}</span>
                     {q.fps && <span>{q.fps}</span>}
                     <span>{q.container}</span>
-                    <span className="font-medium text-white">{q.estimatedSize}</span>
                   </div>
                 </div>
                 <Button
@@ -84,7 +83,7 @@ export function OptionsTable({ qualities, audioOptions, onDownload, loading }: O
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface2">
-                  {['RESOLUTION', 'CODEC / FPS', 'FEATURES', 'CONTAINER', 'EST. SIZE', 'ACTION'].map((h) => (
+                  {['RESOLUTION', 'CODEC / FPS', 'FEATURES', 'CONTAINER', 'ACTION'].map((h) => (
                     <th
                       key={h}
                       className="px-5 py-3.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted/60"
@@ -124,7 +123,6 @@ export function OptionsTable({ qualities, audioOptions, onDownload, loading }: O
                       </div>
                     </td>
                     <td className="px-5 py-4 text-sm text-muted">{q.container}</td>
-                    <td className="px-5 py-4 text-sm font-medium text-white">{q.estimatedSize}</td>
                     <td className="px-5 py-4">
                       <Button
                         className="gap-1.5 text-xs"
@@ -162,7 +160,6 @@ export function OptionsTable({ qualities, audioOptions, onDownload, loading }: O
                   </div>
                   <div className="mt-1 flex items-center gap-3 text-xs text-muted">
                     <span>{a.bitrate}</span>
-                    <span className="font-medium text-white">{a.estimatedSize}</span>
                   </div>
                 </div>
                 <Button
@@ -182,7 +179,7 @@ export function OptionsTable({ qualities, audioOptions, onDownload, loading }: O
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface2">
-                  {['FORMAT', 'QUALITY', 'BITRATE', 'EST. SIZE', 'ACTION'].map((h) => (
+                  {['FORMAT', 'QUALITY', 'BITRATE', 'ACTION'].map((h) => (
                     <th
                       key={h}
                       className="px-5 py-3.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted/60"
@@ -202,7 +199,6 @@ export function OptionsTable({ qualities, audioOptions, onDownload, loading }: O
                     </td>
                     <td className="px-5 py-4 text-sm text-white">{a.label}</td>
                     <td className="px-5 py-4 text-sm text-muted">{a.bitrate}</td>
-                    <td className="px-5 py-4 text-sm font-medium text-white">{a.estimatedSize}</td>
                     <td className="px-5 py-4">
                       <Button
                         className="gap-1.5 text-xs"

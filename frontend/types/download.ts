@@ -31,7 +31,7 @@ export interface QualityOption {
   fps?: string;
   features: string[];
   container: string;
-  estimatedSize: string;
+  estimatedSize: string | null;
   recommended?: boolean;
 }
 
@@ -40,7 +40,7 @@ export interface AudioOption {
   label: string;
   format: string;
   bitrate: string;
-  estimatedSize: string;
+  estimatedSize: string | null;
 }
 
 export type DownloadStatus =
