@@ -72,20 +72,39 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
   const height = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
   const h = !isNaN(height) && height > 0 ? height : 1080;
 
+  const isCombined = parts.length >= 3 && parts[2] === '1';
+
   const args = [sourceUrl, '-o', outputTemplate, '--no-playlist', '--newline', '--js-runtimes', 'node'];
   if (audioOnly) {
     args.push('-x', '--audio-format', 'mp3');
+  } else if (isCombined) {
+    // Combined audio+video stream (Instagram, TikTok, Facebook).
+    // These platforms do not publish separate video-only DASH tracks, so
+    // bestvideo[height<=N]+bestaudio always fails. Use best[height<=N] which
+    // matches the combined stream at the correct resolution.
+    args.push(
+      '-f', [
+        `best[height<=${h}][vcodec^=avc][ext=mp4]`,
+        `best[height<=${h}][ext=mp4]`,
+        `best[height<=${h}]`,
+        // Last resort: separate-stream merge in case metadata was wrong
+        `bestvideo[height<=${h}]+bestaudio`,
+        `best[vcodec!=none]`,
+      ].join('/'),
+      '--merge-output-format', 'mp4',
+    );
   } else {
-    // Prefer h264 (avc) at the requested height, fall back to any codec,
-    // then to best available with video. This avoids VP9-in-MP4 which most
-    // players can't display correctly.
+    // Separate video+audio DASH streams (YouTube, Vimeo, etc.).
+    // Prefer h264 to avoid VP9-in-MP4 which most native players reject.
     args.push(
       '-f', [
         `bestvideo[height<=${h}][vcodec^=avc][ext=mp4]+bestaudio[ext=m4a]`,
         `bestvideo[height<=${h}][vcodec^=avc]+bestaudio`,
         `bestvideo[height<=${h}][ext=mp4]+bestaudio[ext=m4a]`,
         `bestvideo[height<=${h}]+bestaudio`,
-        `bestvideo[height<=${h}]`,
+        // Fallback to combined in case platform doesn't offer separate tracks
+        `best[height<=${h}][ext=mp4]`,
+        `best[height<=${h}]`,
         `bestvideo+bestaudio`,
         `best[vcodec!=none]`,
       ].join('/'),
