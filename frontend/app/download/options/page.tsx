@@ -23,7 +23,11 @@ export default function DownloadOptionsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!sourceUrl) return;
+    if (!sourceUrl) {
+      setFetchError('No URL provided. Please go back and enter a valid URL.');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setFetchError(null);
     fetchAllMediaData(sourceUrl)
@@ -54,14 +58,14 @@ export default function DownloadOptionsPage() {
   return (
     <div className="min-h-screen">
       <Navbar />
-      <main className="container mx-auto py-12">
+      <main className="container mx-auto px-4 py-8 sm:py-12">
         {/* Page header */}
         <div className="mb-10">
           <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-widest text-accent">
             <Settings2 className="h-3.5 w-3.5" />
             Configuration
           </div>
-          <h1 className="text-4xl font-bold text-white">Download Options</h1>
+          <h1 className="text-2xl font-bold text-white sm:text-4xl">Download Options</h1>
           <p className="mt-3 max-w-lg text-sm leading-7 text-muted">
             Select your preferred quality and format. We offer optimised profiles for every device
             and professional standard.

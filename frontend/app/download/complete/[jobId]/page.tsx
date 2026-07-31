@@ -14,10 +14,15 @@ export default function DownloadCompletePage() {
   const thumbnail = searchParams.get('thumb');
   const [job, setJob] = useState<DownloadJob | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getCompletedJob(jobId)
       .then(setJob)
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg.includes('not yet completed') ? 'This download is not ready yet.' : 'Could not load download details. The file may have expired.');
+      })
       .finally(() => setLoading(false));
   }, [jobId]);
 
@@ -51,15 +56,22 @@ export default function DownloadCompletePage() {
                 </div>
               </div>
             </div>
+          ) : error ? (
+            <div className="rounded-3xl border border-red-500/30 bg-red-500/10 p-10 text-center">
+              <p className="text-lg font-semibold text-red-400">Something went wrong</p>
+              <p className="mt-2 text-sm text-muted">{error}</p>
+              <button
+                onClick={() => window.history.back()}
+                className="mt-6 rounded-full border border-border px-5 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-white"
+              >
+                ← Go back
+              </button>
+            </div>
           ) : job ? (
             <div className="rounded-3xl border border-border bg-surface p-8 shadow-card">
               <CompleteCard job={job} thumbnail={thumbnail} />
             </div>
-          ) : (
-            <div className="rounded-3xl border border-border bg-surface p-10 text-center">
-              <p className="text-muted">Could not load download details.</p>
-            </div>
-          )}
+          ) : null}
         </div>
       </main>
       <Footer />

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { Moon, Sun, ArrowDownToLine } from 'lucide-react';
+import { Moon, Sun, ArrowDownToLine, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -19,24 +19,29 @@ export function Navbar() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
   useEffect(() => setMounted(true), []);
+
+  // Close mobile menu on route change
+  useEffect(() => setMenuOpen(false), [pathname]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-surface/80 backdrop-blur-xl">
       <div className="container mx-auto flex items-center justify-between px-4 py-4">
+        {/* Logo */}
         <Link href="/" className="flex items-center gap-2 text-sm font-semibold text-accent">
           <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-accent">
             <ArrowDownToLine className="h-3.5 w-3.5 text-white" />
           </span>
-          Universal Media Downloader
+          <span className="hidden xs:inline sm:inline">Universal Media Downloader</span>
+          <span className="xs:hidden sm:hidden">UMD</span>
         </Link>
 
+        {/* Desktop nav */}
         <nav className="hidden items-center gap-8 md:flex">
           {navItems.map((item) => {
-            const isActive =
-              item.href !== '/'
-                ? pathname.startsWith(item.href)
-                : pathname === '/';
+            const isActive = item.href !== '/' ? pathname.startsWith(item.href) : pathname === '/';
             return (
               <Link
                 key={item.label}
@@ -54,7 +59,8 @@ export function Navbar() {
           })}
         </nav>
 
-        <div className="flex items-center gap-3">
+        {/* Right side */}
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             className="rounded-xl p-2 text-muted transition-colors hover:bg-surface2 hover:text-white"
@@ -78,8 +84,54 @@ export function Navbar() {
           >
             Try Free
           </Link>
+
+          {/* Mobile hamburger */}
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            className="rounded-xl p-2 text-muted transition-colors hover:bg-surface2 hover:text-white md:hidden"
+            aria-label="Toggle menu"
+          >
+            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile menu drawer */}
+      {menuOpen && (
+        <div className="border-t border-border bg-surface/95 backdrop-blur-xl md:hidden">
+          <nav className="container mx-auto flex flex-col px-4 py-4">
+            {navItems.map((item) => {
+              const isActive = item.href !== '/' ? pathname.startsWith(item.href) : pathname === '/';
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className={cn(
+                    'border-b border-border/50 py-3 text-sm transition-colors last:border-0',
+                    isActive ? 'font-medium text-white' : 'text-muted hover:text-white'
+                  )}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+            <div className="mt-4 flex items-center gap-3 pt-2">
+              <Link
+                href="/login"
+                className="flex-1 rounded-xl border border-border py-2 text-center text-sm text-muted transition-colors hover:border-accent hover:text-white"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/register"
+                className="flex-1 rounded-xl border border-accent bg-accent/10 py-2 text-center text-sm font-medium text-accent transition-colors hover:bg-accent/20"
+              >
+                Try Free
+              </Link>
+            </div>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

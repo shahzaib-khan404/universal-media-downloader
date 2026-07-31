@@ -8,6 +8,39 @@ import { getStorage } from '../../lib/storage';
 const DOWNLOAD_DIR = process.env.DOWNLOAD_DIR ?? path.join(process.cwd(), 'downloads');
 if (!fs.existsSync(DOWNLOAD_DIR)) fs.mkdirSync(DOWNLOAD_DIR, { recursive: true });
 
+function getVideoCodec(filePath: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const proc = spawn('ffprobe', [
+      '-v', 'quiet', '-print_format', 'json', '-show_streams', filePath,
+    ]);
+    let out = '';
+    proc.stdout.on('data', (d: Buffer) => { out += d.toString(); });
+    proc.on('close', () => {
+      try {
+        const streams = JSON.parse(out).streams as Array<{ codec_type: string; codec_name: string }>;
+        const video = streams.find((s) => s.codec_type === 'video');
+        resolve(video?.codec_name ?? null);
+      } catch { resolve(null); }
+    });
+    proc.on('error', () => resolve(null));
+  });
+}
+
+function transcodeToH264(inputPath: string, outputPath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn('ffmpeg', [
+      '-i', inputPath,
+      '-c:v', 'libx264', '-crf', '23', '-preset', 'fast',
+      '-c:a', 'copy',
+      '-movflags', '+faststart',
+      '-y', outputPath,
+    ]);
+    proc.stderr.on('data', (d: Buffer) => process.stderr.write(`[ffmpeg] ${d}`));
+    proc.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`ffmpeg exit ${code}`))));
+    proc.on('error', reject);
+  });
+}
+
 const MAX_ATTEMPTS = 3;
 let running = false;
 
@@ -32,15 +65,35 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
   emitJobUpdate({ id: jobId, status: 'downloading', progress: 0, speed: null, eta: null, error: null });
 
   const outputTemplate = path.join(DOWNLOAD_DIR, `${jobId}.%(ext)s`);
+  // qualityId is encoded as "fmtId:height:hasAudio" (from metadata service).
+  // We use height-based format selection for all platforms so yt-dlp can prefer
+  // h264 (avc) over VP9 — VP9 in an MP4 container is dropped by most players.
+  const parts = qualityId.split(':');
+  const height = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
+  const h = !isNaN(height) && height > 0 ? height : 1080;
+
   const args = [sourceUrl, '-o', outputTemplate, '--no-playlist', '--newline', '--js-runtimes', 'node'];
   if (audioOnly) {
     args.push('-x', '--audio-format', 'mp3');
   } else {
+    // Prefer h264 (avc) at the requested height, fall back to any codec,
+    // then to best available with video. This avoids VP9-in-MP4 which most
+    // players can't display correctly.
     args.push(
-      '-f', `${qualityId}+bestaudio[ext=m4a]/${qualityId}+bestaudio/best[ext=mp4]/best`,
+      '-f', [
+        `bestvideo[height<=${h}][vcodec^=avc][ext=mp4]+bestaudio[ext=m4a]`,
+        `bestvideo[height<=${h}][vcodec^=avc]+bestaudio`,
+        `bestvideo[height<=${h}][ext=mp4]+bestaudio[ext=m4a]`,
+        `bestvideo[height<=${h}]+bestaudio`,
+        `bestvideo[height<=${h}]`,
+        `bestvideo+bestaudio`,
+        `best[vcodec!=none]`,
+      ].join('/'),
       '--merge-output-format', 'mp4',
     );
   }
+
+  console.log(`[direct-worker] yt-dlp args: ${args.join(' ')}`);
 
   await new Promise<void>((resolve, reject) => {
     const proc = spawn('yt-dlp', args, { env: { ...process.env, PYTHONUNBUFFERED: '1' } });
@@ -67,10 +120,22 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
     proc.on('error', reject);
   });
 
-  // Locate output file and persist via storage abstraction
+  // Locate output file
   const files = fs.readdirSync(DOWNLOAD_DIR).filter((f) => f.startsWith(jobId));
-  const fileName = files[0] ?? `${jobId}.mp4`;
-  const localPath = path.join(DOWNLOAD_DIR, fileName);
+  let fileName = files[0] ?? `${jobId}.mp4`;
+  let localPath = path.join(DOWNLOAD_DIR, fileName);
+
+  // VP9 in an MP4 container is not playable in QuickTime or most native players.
+  // Detect it post-download and re-encode to h264 so the MP4 is universally compatible.
+  const videoCodec = await getVideoCodec(localPath);
+  if (videoCodec === 'vp9' && localPath.endsWith('.mp4')) {
+    console.log(`[direct-worker] VP9 detected — re-encoding to h264 for compatibility`);
+    const h264Path = path.join(DOWNLOAD_DIR, `${jobId}_h264.mp4`);
+    await transcodeToH264(localPath, h264Path);
+    fs.unlinkSync(localPath);
+    fs.renameSync(h264Path, localPath);
+    console.log(`[direct-worker] Re-encode complete → ${fileName}`);
+  }
 
   const storage = getStorage();
   const storageKey = await storage.save(localPath, fileName);

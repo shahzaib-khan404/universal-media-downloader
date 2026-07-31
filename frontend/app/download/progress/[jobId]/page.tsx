@@ -37,6 +37,8 @@ export default function DownloadProgressPage() {
   const [job, setJob] = useState<DownloadJob | null>(null);
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [failedReason, setFailedReason] = useState<string | null>(null);
+  const [pollErrors, setPollErrors] = useState(0);
 
   useEffect(() => {
     const isMock = jobId.startsWith('mock-');
@@ -64,15 +66,27 @@ export default function DownloadProgressPage() {
       try {
         const data = await getDownloadJob(jobId);
         setJob(data);
+        setPollErrors(0);
         setProgress(data.progress ?? 0);
-        if (data.status === 'completed' || data.status === 'failed') {
+        if (data.status === 'completed') {
           clearInterval(pollId);
-          if (data.status === 'completed') {
-            const q = thumb ? `?thumb=${encodeURIComponent(thumb)}` : '';
-            router.push(`/download/complete/${jobId}${q}`);
-          }
+          const q = thumb ? `?thumb=${encodeURIComponent(thumb)}` : '';
+          router.push(`/download/complete/${jobId}${q}`);
+        } else if (data.status === 'failed') {
+          clearInterval(pollId);
+          setFailedReason((data as unknown as Record<string, unknown>).error as string ?? 'The download failed. Please try again.');
         }
-      } catch { /* silent — next tick will retry */ }
+      } catch (err) {
+        setPollErrors((n) => {
+          const next = n + 1;
+          if (next >= 5) {
+            clearInterval(pollId);
+            setFailedReason('Lost connection to the server. Please check your connection and try again.');
+          }
+          return next;
+        });
+        void err;
+      }
     }, 2000);
 
     return () => clearInterval(pollId);
@@ -83,23 +97,61 @@ export default function DownloadProgressPage() {
   return (
     <div className="min-h-screen">
       <Navbar />
-      <main className="container mx-auto py-12">
+      <main className="container mx-auto px-4 py-8 sm:py-12">
         {/* Page header */}
-        <div className="mb-10">
+        <div className="mb-8 sm:mb-10">
           <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-widest text-accent">
             <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-accent" />
             Live Download
           </div>
-          <h1 className="text-4xl font-bold text-white">Download in Progress</h1>
-          <p className="mt-3 text-sm text-muted">
+          <h1 className="text-2xl font-bold text-white sm:text-4xl">Download in Progress</h1>
+          <p className="mt-2 text-xs text-muted sm:mt-3 sm:text-sm">
             Job ID: <span className="font-mono text-white">{jobId}</span>
           </p>
         </div>
 
+        {failedReason && (
+          <div className="mb-8 rounded-3xl border border-red-500/30 bg-red-500/10 p-8 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500/10">
+              <Square className="h-6 w-6 text-red-400" />
+            </div>
+            <p className="text-lg font-semibold text-red-400">Download Failed</p>
+            <p className="mt-2 text-sm text-muted">{failedReason}</p>
+            <button
+              onClick={() => window.history.back()}
+              className="mt-6 rounded-full border border-border px-5 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-white"
+            >
+              ← Try again
+            </button>
+          </div>
+        )}
+
         <div className="space-y-6">
-          {/* Step tracker */}
-          <div className="rounded-3xl border border-border bg-surface p-6 shadow-card">
-            <div className="flex items-center justify-between">
+          {/* Step tracker — compact on mobile, full on sm+ */}
+          <div className="rounded-3xl border border-border bg-surface p-4 shadow-card sm:p-6">
+            {/* Mobile: current step pill */}
+            <div className="flex items-center justify-between sm:hidden">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-accent bg-accent/10 text-xs font-bold text-accent">
+                  {currentStep + 1}
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-white">{STEPS[currentStep]?.label ?? 'Processing'}</p>
+                  <p className="text-[10px] text-muted">Step {currentStep + 1} of {STEPS.length}</p>
+                </div>
+              </div>
+              <div className="flex gap-1">
+                {STEPS.map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-1.5 w-5 rounded-full transition-colors ${i <= currentStep ? 'bg-accent' : 'bg-border'}`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Desktop: full step row */}
+            <div className="hidden items-center justify-between sm:flex">
               {STEPS.map((step, i) => (
                 <div key={step.key} className="flex flex-1 items-center">
                   <div className="flex flex-col items-center gap-2">
@@ -114,7 +166,7 @@ export default function DownloadProgressPage() {
                     >
                       {i < currentStep ? '✓' : i + 1}
                     </div>
-                    <span className={`whitespace-nowrap text-xs ${i <= currentStep ? 'text-white' : 'text-muted'}`}>
+                    <span className={`text-xs ${i <= currentStep ? 'text-white' : 'text-muted'}`}>
                       {step.label}
                     </span>
                   </div>
@@ -129,7 +181,7 @@ export default function DownloadProgressPage() {
           {/* Main progress area */}
           <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
             {/* Progress ring + controls */}
-            <div className="flex flex-col items-center justify-center gap-8 rounded-3xl border border-border bg-surface p-10 shadow-card">
+            <div className="flex flex-col items-center justify-center gap-6 rounded-3xl border border-border bg-surface p-6 shadow-card sm:gap-8 sm:p-10">
               <ProgressRing progress={progress} size={220} strokeWidth={16} />
 
               <div className="flex items-center gap-3">

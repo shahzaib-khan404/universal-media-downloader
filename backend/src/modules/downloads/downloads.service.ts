@@ -64,7 +64,10 @@ export const downloadsService = {
       })
       .slice(0, 6)
       .map((f) => ({
-        id: f.format_id,
+        // Encode "formatId:height:hasAudio" so the worker can use height-based
+        // selection for combined streams (Instagram, Facebook) without needing
+        // a separate schema field.
+        id: `${f.format_id}:${f.height ?? 0}:${f.acodec && f.acodec !== 'none' ? '1' : '0'}`,
         label: `${f.height}p`,
         resolution: `${f.width ?? '?'}×${f.height}`,
         codec: f.vcodec ?? 'unknown',

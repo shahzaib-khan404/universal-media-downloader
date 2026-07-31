@@ -9,12 +9,21 @@ const BASE_HEADERS: HeadersInit = {
   'ngrok-skip-browser-warning': 'true',
 };
 
+async function throwWithBody(res: Response, method: string, path: string): Promise<never> {
+  let reason = '';
+  try {
+    const body = await res.json() as { message?: string; error?: string };
+    reason = body.message ?? body.error ?? '';
+  } catch { /* body was not JSON */ }
+  throw new Error(reason || `${method} ${path} failed: ${res.status}`);
+}
+
 export async function apiGet<T>(path: string): Promise<T> {
   const res = await fetch(url(path), {
     credentials: 'include',
     headers: BASE_HEADERS,
   });
-  if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
+  if (!res.ok) await throwWithBody(res, 'GET', path);
   return res.json() as Promise<T>;
 }
 
@@ -25,7 +34,7 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
     credentials: 'include',
   });
-  if (!res.ok) throw new Error(`POST ${path} failed: ${res.status}`);
+  if (!res.ok) await throwWithBody(res, 'POST', path);
   return res.json() as Promise<T>;
 }
 
@@ -35,6 +44,6 @@ export async function apiDelete<T>(path: string): Promise<T> {
     credentials: 'include',
     headers: BASE_HEADERS,
   });
-  if (!res.ok) throw new Error(`DELETE ${path} failed: ${res.status}`);
+  if (!res.ok) await throwWithBody(res, 'DELETE', path);
   return res.json() as Promise<T>;
 }

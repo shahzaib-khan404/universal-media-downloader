@@ -1,5 +1,10 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, FolderOpen, Download, Share2, Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { CheckCircle2, FolderOpen, Download, Share2, Plus, Copy, Check } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import type { DownloadJob } from '@/types/download';
@@ -12,9 +17,51 @@ interface CompleteCardProps {
 }
 
 export function CompleteCard({ job, thumbnail }: CompleteCardProps) {
+  const router = useRouter();
   const fileUrl = `${API}/api/downloads/${job.id}/file`;
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+    const shareUrl = job.url || fileUrl;
+    const shareData = {
+      title: job.mediaFilename || 'Downloaded media',
+      text: `Check out this video I downloaded with Universal Media Downloader`,
+      url: shareUrl,
+    };
+
+    if (navigator.share && navigator.canShare?.(shareData)) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        // User cancelled — don't show an error
+        if ((err as Error).name !== 'AbortError') {
+          toast.error('Could not share. Link copied to clipboard instead.');
+          await copyToClipboard(shareUrl);
+        }
+      }
+    } else {
+      // Desktop fallback — copy link to clipboard
+      await copyToClipboard(shareUrl);
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success('Link copied to clipboard');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Could not copy to clipboard. Please copy the URL manually.');
+    }
+  };
+
+  const handleOpenFolder = () => {
+    router.push('/history');
+  };
+
   return (
-    <div className="flex flex-col items-center gap-10 py-8">
+    <div className="flex flex-col items-center gap-6 py-6 sm:gap-10 sm:py-8">
       {/* Success icon */}
       <div className="flex flex-col items-center gap-4 text-center">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-accent/10">
@@ -67,23 +114,37 @@ export function CompleteCard({ job, thumbnail }: CompleteCardProps) {
             </div>
           </div>
         </div>
+
+        {/* Source URL row */}
+        {job.url && (
+          <div className="mt-4 flex items-center gap-2 rounded-xl border border-border bg-surface2 px-3 py-2">
+            <span className="min-w-0 flex-1 truncate text-xs text-muted">{job.url}</span>
+            <button
+              onClick={() => copyToClipboard(job.url)}
+              className="shrink-0 rounded-lg p-1 text-muted transition-colors hover:text-white"
+              title="Copy source URL"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+        )}
       </Card>
 
       {/* Action buttons */}
-      <div className="flex flex-col items-center gap-4">
-        <div className="flex flex-wrap justify-center gap-3">
-          <Button className="gap-2">
+      <div className="flex w-full max-w-xl flex-col items-center gap-4">
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
+          <Button className="w-full gap-2 sm:w-auto" onClick={handleOpenFolder}>
             <FolderOpen className="h-4 w-4" />
-            Open Folder
+            Open History
           </Button>
-          <a href={fileUrl} download={job.mediaFilename || undefined}>
-            <Button variant="secondary" className="gap-2">
+          <a href={fileUrl} download={job.mediaFilename || undefined} className="w-full sm:w-auto">
+            <Button variant="secondary" className="w-full gap-2">
               <Download className="h-4 w-4" />
               Save to Device
             </Button>
           </a>
-          <Button variant="secondary" className="gap-2">
-            <Share2 className="h-4 w-4" />
+          <Button variant="secondary" className="w-full gap-2 sm:w-auto" onClick={handleShare}>
+            {copied ? <Check className="h-4 w-4 text-green-400" /> : <Share2 className="h-4 w-4" />}
             Share
           </Button>
         </div>

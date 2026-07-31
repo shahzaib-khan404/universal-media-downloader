@@ -126,52 +126,23 @@ export async function createDownloadJob(
   qualityId: string,
   audioOnly = false
 ): Promise<{ jobId: string }> {
-  try {
-    return await apiPost<{ jobId: string }>('/downloads', { url: sourceUrl, qualityId, audioOnly });
-  } catch {
-    return { jobId: `mock-${Date.now()}` };
-  }
+  return apiPost<{ jobId: string }>('/downloads', { url: sourceUrl, qualityId, audioOnly });
 }
 
 export async function getDownloadJob(jobId: string): Promise<DownloadJob> {
-  try {
-    const raw = await apiGet<Record<string, unknown>>(`/downloads/${jobId}`);
-    return mapJob(raw);
-  } catch {
-    return {
-      id: jobId, url: '', mediaTitle: 'Download', mediaFilename: 'download.mp4',
-      mediaThumbnail: null, resolution: '', codec: '', container: '', totalSize: null,
-      status: 'downloading', progress: 0, speed: null, timeRemaining: null,
-      downloaded: null, partsCompleted: null, partsTotal: null, streamStatus: null,
-      startedAt: new Date().toISOString(), completedAt: null, fileSize: null,
-    };
-  }
+  const raw = await apiGet<Record<string, unknown>>(`/downloads/${jobId}`);
+  return mapJob(raw);
 }
 
 export async function getCompletedJob(jobId: string): Promise<DownloadJob> {
-  try {
-    const raw = await apiGet<Record<string, unknown>>(`/downloads/${jobId}`);
-    if (raw.status !== 'completed') throw new Error('not completed');
-    return mapJob(raw);
-  } catch {
-    return {
-      id: jobId, url: '', mediaTitle: 'Download', mediaFilename: 'download.mp4',
-      mediaThumbnail: null, resolution: '1080p', codec: 'H.264', container: 'MP4',
-      totalSize: '420 MB', status: 'completed', progress: 100, speed: null,
-      timeRemaining: null, downloaded: '420 MB', partsCompleted: null, partsTotal: null,
-      streamStatus: null, startedAt: new Date().toISOString(),
-      completedAt: new Date().toISOString(), fileSize: '420 MB',
-    };
-  }
+  const raw = await apiGet<Record<string, unknown>>(`/downloads/${jobId}`);
+  if (raw.status !== 'completed') throw new Error('Job is not yet completed');
+  return mapJob(raw);
 }
 
 export async function listDownloadJobs(): Promise<DownloadJob[]> {
-  try {
-    const rows = await apiGet<Record<string, unknown>[]>('/downloads');
-    return rows.map(mapJob);
-  } catch {
-    return [];
-  }
+  const rows = await apiGet<Record<string, unknown>[]>('/downloads');
+  return rows.map(mapJob);
 }
 
 // Legacy helpers

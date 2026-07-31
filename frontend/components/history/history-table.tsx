@@ -1,18 +1,112 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Search,
   ChevronFirst,
   ChevronLast,
   ChevronLeft,
   ChevronRight,
-  MoreHorizontal,
   RefreshCw,
+  MoreHorizontal,
+  Download,
+  RotateCcw,
+  Trash2,
+  ExternalLink,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { listDownloadJobs } from '@/services/download.service';
+import { apiDelete } from '@/services/api';
 import type { DownloadJob } from '@/types/download';
+
+const API = process.env.NEXT_PUBLIC_API_URL ?? '';
+
+function JobMenu({ job, onDeleted }: { job: DownloadJob; onDeleted: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const handleDelete = async () => {
+    setOpen(false);
+    try {
+      await apiDelete(`/downloads/${job.id}`);
+      toast.success('Download removed from history.');
+      onDeleted(job.id);
+    } catch {
+      toast.error('Could not delete — you may need to be signed in.');
+    }
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="rounded-lg p-1.5 text-muted hover:bg-surface2 hover:text-white"
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-8 z-50 w-44 overflow-hidden rounded-xl border border-border bg-surface shadow-xl">
+          {/* Open source URL */}
+          <a
+            href={job.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-muted transition-colors hover:bg-surface2 hover:text-white"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Open Source
+          </a>
+
+          {/* Re-download — go back to options page */}
+          <a
+            href={`/download/options?url=${encodeURIComponent(job.url)}`}
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-muted transition-colors hover:bg-surface2 hover:text-white"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Re-download
+          </a>
+
+          {/* Download file — only for completed jobs */}
+          {job.status === 'completed' && (
+            <a
+              href={`${API}/api/downloads/${job.id}/file`}
+              download={job.mediaFilename || undefined}
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-muted transition-colors hover:bg-surface2 hover:text-white"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Save to Device
+            </a>
+          )}
+
+          <div className="my-1 h-px bg-border" />
+
+          {/* Delete */}
+          <button
+            onClick={handleDelete}
+            className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-xs text-red-400 transition-colors hover:bg-red-500/10"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const filterTabs = ['All', 'Completed', 'Downloading', 'Failed', 'Queued'];
 
@@ -51,8 +145,11 @@ export function HistoryTable() {
     setLoading(true);
     listDownloadJobs()
       .then(setJobs)
+      .catch(() => toast.error('Could not load download history.'))
       .finally(() => setLoading(false));
   };
+
+  const handleDeleted = (id: string) => setJobs((prev) => prev.filter((j) => j.id !== id));
 
   useEffect(() => { load(); }, []);
 
@@ -95,7 +192,7 @@ export function HistoryTable() {
               placeholder="Search downloads..."
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="w-36 bg-transparent text-xs text-white placeholder:text-muted/60 focus:outline-none"
+              className="w-full bg-transparent text-xs text-white placeholder:text-muted/60 focus:outline-none sm:w-36"
             />
           </div>
           <button
@@ -129,12 +226,21 @@ export function HistoryTable() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                {['FILE', 'SOURCE', 'PLATFORM', 'DATE', 'QUALITY', 'SIZE', 'STATUS', ''].map((col, i) => (
+                {[
+                  { label: 'FILE', cls: '' },
+                  { label: 'SOURCE', cls: 'hidden sm:table-cell' },
+                  { label: 'PLATFORM', cls: 'hidden sm:table-cell' },
+                  { label: 'DATE', cls: 'hidden sm:table-cell' },
+                  { label: 'QUALITY', cls: '' },
+                  { label: 'SIZE', cls: 'hidden sm:table-cell' },
+                  { label: 'STATUS', cls: '' },
+                  { label: '', cls: '' },
+                ].map(({ label, cls }, i) => (
                   <th
                     key={i}
-                    className="whitespace-nowrap px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider text-muted/60"
+                    className={`whitespace-nowrap px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-wider text-muted/60 sm:px-4 ${cls}`}
                   >
-                    {col}
+                    {label}
                   </th>
                 ))}
               </tr>
@@ -146,12 +252,12 @@ export function HistoryTable() {
                 const date = new Date(job.startedAt).toLocaleDateString('en-GB');
                 return (
                   <tr key={job.id} className="transition-colors hover:bg-surface2/40">
-                    <td className="px-4 py-3">
-                      <span className="block max-w-[180px] truncate text-xs font-medium text-white">
+                    <td className="px-2 py-3 sm:px-4">
+                      <span className="block max-w-[140px] truncate text-xs font-medium text-white sm:max-w-[180px]">
                         {job.mediaFilename || job.id}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="hidden px-4 py-3 sm:table-cell">
                       <a
                         href={job.url}
                         target="_blank"
@@ -161,19 +267,19 @@ export function HistoryTable() {
                         {job.url}
                       </a>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="hidden px-4 py-3 sm:table-cell">
                       <span className={`text-xs font-semibold ${platformColor}`}>{platformName}</span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted">{date}</td>
-                    <td className="px-4 py-3">
+                    <td className="hidden px-4 py-3 text-xs text-muted sm:table-cell">{date}</td>
+                    <td className="px-2 py-3 sm:px-4">
                       <span className="rounded-md bg-surface2 px-2 py-0.5 text-xs font-medium text-white">
-                        {job.resolution || job.url}
+                        {job.resolution || '—'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted">
+                    <td className="hidden px-4 py-3 text-xs text-muted sm:table-cell">
                       {job.fileSize ?? job.totalSize ?? '—'}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2 py-3 sm:px-4">
                       {job.status === 'downloading' && job.progress > 0 ? (
                         <div className="flex flex-col gap-1">
                           <div className="flex justify-between text-xs">
@@ -193,10 +299,8 @@ export function HistoryTable() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
-                      <button className="rounded-lg p-1.5 text-muted hover:bg-surface2 hover:text-white">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
+                    <td className="px-2 py-3 sm:px-4">
+                      <JobMenu job={job} onDeleted={handleDeleted} />
                     </td>
                   </tr>
                 );
