@@ -82,35 +82,21 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
     args.push('-x', '--audio-format', 'mp3');
   } else if (isCombined) {
     // Combined audio+video stream (Instagram, TikTok, Facebook).
-    // These platforms do not publish separate video-only DASH tracks, so
-    // bestvideo[height<=N]+bestaudio always fails. Use best[height<=N] which
-    // matches the combined stream at the correct resolution.
+    // Sort: height DESC then bitrate DESC — resolution is the priority.
     args.push(
-      '-f', [
-        `best[height<=${h}][vcodec^=avc][ext=mp4]`,
-        `best[height<=${h}][ext=mp4]`,
-        `best[height<=${h}]`,
-        // Last resort: separate-stream merge in case metadata was wrong
-        `bestvideo[height<=${h}]+bestaudio`,
-        `best[vcodec!=none]`,
-      ].join('/'),
+      '-f', `best[height<=${h}]/best`,
+      '--format-sort', 'height,br',
       '--merge-output-format', 'mp4',
     );
   } else {
     // Separate video+audio DASH streams (YouTube, Vimeo, etc.).
-    // Prefer h264 to avoid VP9-in-MP4 which most native players reject.
+    // Sort: height DESC then bitrate DESC — resolution is the priority.
+    // Codec is a tiebreaker only; h264 preference comes AFTER we have the
+    // right resolution. Without the sort, [vcodec^=avc] picks 960p h264
+    // over 1920p VP9 when the user asked for 1920p.
     args.push(
-      '-f', [
-        `bestvideo[height<=${h}][vcodec^=avc][ext=mp4]+bestaudio[ext=m4a]`,
-        `bestvideo[height<=${h}][vcodec^=avc]+bestaudio`,
-        `bestvideo[height<=${h}][ext=mp4]+bestaudio[ext=m4a]`,
-        `bestvideo[height<=${h}]+bestaudio`,
-        // Fallback to combined in case platform doesn't offer separate tracks
-        `best[height<=${h}][ext=mp4]`,
-        `best[height<=${h}]`,
-        `bestvideo+bestaudio`,
-        `best[vcodec!=none]`,
-      ].join('/'),
+      '-f', `bestvideo[height<=${h}]+bestaudio/best[height<=${h}]/best`,
+      '--format-sort', 'height,br',
       '--merge-output-format', 'mp4',
     );
   }
@@ -147,11 +133,11 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
   let fileName = files[0] ?? `${jobId}.mp4`;
   let localPath = path.join(DOWNLOAD_DIR, fileName);
 
-  // VP9 in an MP4 container is not playable in QuickTime or most native players.
-  // Detect it post-download and re-encode to h264 so the MP4 is universally compatible.
+  // VP9 and AV1 in an MP4 container are not playable in QuickTime or most
+  // native players. Detect post-download and re-encode to h264.
   const videoCodec = await getVideoCodec(localPath);
-  if (videoCodec === 'vp9' && localPath.endsWith('.mp4')) {
-    console.log(`[direct-worker] VP9 detected — re-encoding to h264 for compatibility`);
+  if ((videoCodec === 'vp9' || videoCodec === 'av1') && localPath.endsWith('.mp4')) {
+    console.log(`[direct-worker] ${videoCodec.toUpperCase()} detected — re-encoding to h264 for compatibility`);
     const h264Path = path.join(DOWNLOAD_DIR, `${jobId}_h264.mp4`);
     await transcodeToH264(localPath, h264Path);
     fs.unlinkSync(localPath);
