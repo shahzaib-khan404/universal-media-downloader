@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/navigation/navbar';
 import { Footer } from '@/components/navigation/footer';
@@ -27,33 +27,6 @@ function stepIndex(status: string) {
   return 0;
 }
 
-type RawJob = Record<string, unknown>;
-
-function mapRaw(data: RawJob): DownloadJob {
-  const result = data.result as RawJob | null;
-  return {
-    id: data.id as string,
-    url: (data.sourceUrl as string) ?? '',
-    mediaTitle: (result?.fileName as string) ?? '',
-    mediaFilename: (result?.fileName as string) ?? '',
-    mediaThumbnail: null,
-    resolution: (result?.resolution as string) ?? String(data.qualityId ?? ''),
-    codec: (result?.codec as string) ?? '',
-    container: '',
-    totalSize: null,
-    status: data.status as DownloadJob['status'],
-    progress: (data.progress as number) ?? 0,
-    speed: (data.speed as string) ?? null,
-    timeRemaining: (data.eta as string) ?? null,
-    downloaded: null,
-    partsCompleted: null,
-    partsTotal: null,
-    streamStatus: null,
-    startedAt: (data.createdAt as string) ?? new Date().toISOString(),
-    completedAt: (data.updatedAt as string) ?? null,
-    fileSize: null,
-  };
-}
 
 export default function DownloadProgressPage() {
   const { jobId } = useParams<{ jobId: string }>();
@@ -64,16 +37,6 @@ export default function DownloadProgressPage() {
   const [job, setJob] = useState<DownloadJob | null>(null);
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
-
-  const applyRaw = useCallback((raw: RawJob) => {
-    const mapped = mapRaw(raw);
-    setJob(mapped);
-    setProgress(mapped.progress);
-    if (mapped.status === 'completed') {
-      const q = thumb ? `?thumb=${encodeURIComponent(thumb)}` : '';
-      router.push(`/download/complete/${jobId}${q}`);
-    }
-  }, [jobId, router, thumb]);
 
   useEffect(() => {
     const isMock = jobId.startsWith('mock-');
@@ -94,36 +57,26 @@ export default function DownloadProgressPage() {
       return () => clearInterval(id);
     }
 
-    // Real job — connect to SSE stream
-    // ngrok-skip-browser-warning passed as query param because EventSource can't set headers
-    const base = process.env.NEXT_PUBLIC_API_URL ?? '';
-    const source = new EventSource(`${base}/api/downloads/${jobId}/events?ngrok-skip-browser-warning=true`);
-
-    source.onmessage = (e: MessageEvent) => {
+    // Poll the job status every 2 s — simpler and more reliable than
+    // proxying SSE through the Next.js route handler (which buffers the stream).
+    const pollId = setInterval(async () => {
+      if (paused) return;
       try {
-        applyRaw(JSON.parse(e.data as string) as RawJob);
-      } catch { /* ignore parse errors */ }
-    };
-
-    source.onerror = () => {
-      source.close();
-      // SSE failed — fall back to polling
-      const id = setInterval(async () => {
-        try {
-          const data = await getDownloadJob(jobId);
-          setJob(data);
-          setProgress(data.progress ?? 0);
+        const data = await getDownloadJob(jobId);
+        setJob(data);
+        setProgress(data.progress ?? 0);
+        if (data.status === 'completed' || data.status === 'failed') {
+          clearInterval(pollId);
           if (data.status === 'completed') {
-            clearInterval(id);
             const q = thumb ? `?thumb=${encodeURIComponent(thumb)}` : '';
             router.push(`/download/complete/${jobId}${q}`);
           }
-        } catch { /* silent */ }
-      }, 3000);
-    };
+        }
+      } catch { /* silent — next tick will retry */ }
+    }, 2000);
 
-    return () => source.close();
-  }, [jobId, router, paused, applyRaw]);
+    return () => clearInterval(pollId);
+  }, [jobId, router, thumb, paused]);
 
   const currentStep = job ? stepIndex(job.status) : 2;
 
