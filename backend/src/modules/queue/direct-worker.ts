@@ -32,7 +32,7 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
   emitJobUpdate({ id: jobId, status: 'downloading', progress: 0, speed: null, eta: null, error: null });
 
   const outputTemplate = path.join(DOWNLOAD_DIR, `${jobId}.%(ext)s`);
-  const args = [sourceUrl, '-o', outputTemplate, '--no-playlist', '--newline'];
+  const args = [sourceUrl, '-o', outputTemplate, '--no-playlist', '--newline', '--js-runtimes', 'node'];
   if (audioOnly) {
     args.push('-x', '--audio-format', 'mp3');
   } else {

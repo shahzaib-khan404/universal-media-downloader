@@ -45,7 +45,7 @@ function runYtDlp(args: string[]): Promise<string> {
 
 export const downloadsService = {
   async fetchMetadata(url: string): Promise<YtDlpInfo> {
-    const json = await runYtDlp(['--dump-json', '--no-playlist', url]);
+    const json = await runYtDlp(['--dump-json', '--no-playlist', '--js-runtimes', 'node', url]);
     return JSON.parse(json) as YtDlpInfo;
   },
 
