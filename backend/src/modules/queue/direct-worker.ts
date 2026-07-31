@@ -8,37 +8,62 @@ import { getStorage } from '../../lib/storage';
 const DOWNLOAD_DIR = process.env.DOWNLOAD_DIR ?? path.join(process.cwd(), 'downloads');
 if (!fs.existsSync(DOWNLOAD_DIR)) fs.mkdirSync(DOWNLOAD_DIR, { recursive: true });
 
-function getVideoCodec(filePath: string): Promise<string | null> {
+interface VideoInfo {
+  codec: string | null;
+  durationSeconds: number | null;
+}
+
+function getVideoInfo(filePath: string): Promise<VideoInfo> {
   return new Promise((resolve) => {
     const proc = spawn('ffprobe', [
-      '-v', 'quiet', '-print_format', 'json', '-show_streams', filePath,
+      '-v', 'quiet', '-print_format', 'json', '-show_streams', '-show_format', filePath,
     ]);
     let out = '';
     proc.stdout.on('data', (d: Buffer) => { out += d.toString(); });
     proc.on('close', () => {
       try {
-        const streams = JSON.parse(out).streams as Array<{ codec_type: string; codec_name: string }>;
-        const video = streams.find((s) => s.codec_type === 'video');
-        resolve(video?.codec_name ?? null);
-      } catch { resolve(null); }
+        const data = JSON.parse(out) as { streams: Array<{ codec_type: string; codec_name: string }>; format?: { duration?: string } };
+        const video = data.streams.find((s) => s.codec_type === 'video');
+        const dur = parseFloat(data.format?.duration ?? '0');
+        resolve({ codec: video?.codec_name ?? null, durationSeconds: dur > 0 ? dur : null });
+      } catch { resolve({ codec: null, durationSeconds: null }); }
     });
-    proc.on('error', () => resolve(null));
+    proc.on('error', () => resolve({ codec: null, durationSeconds: null }));
   });
 }
 
-function transcodeToH264(inputPath: string, outputPath: string): Promise<void> {
+function transcodeToH264(
+  inputPath: string,
+  outputPath: string,
+  jobId: string,
+  durationSeconds: number | null,
+): Promise<void> {
   return new Promise((resolve, reject) => {
     const proc = spawn('ffmpeg', [
       '-i', inputPath,
-      // CRF 17 = near-lossless for h264. CRF 23 (ffmpeg default) cuts 60-80%
-      // of the bitrate on 4K VP9 content which is clearly visible as loss of
-      // detail. Lower CRF = higher quality = larger file, which is expected.
-      '-c:v', 'libx264', '-crf', '17', '-preset', 'medium',
+      '-c:v', 'libx264', '-crf', '17', '-preset', 'faster',
       '-c:a', 'copy',
       '-movflags', '+faststart',
       '-y', outputPath,
     ]);
-    proc.stderr.on('data', (d: Buffer) => process.stderr.write(`[ffmpeg] ${d}`));
+
+    proc.stderr.on('data', async (d: Buffer) => {
+      const line = d.toString();
+      process.stderr.write(`[ffmpeg] ${line}`);
+      // Parse ffmpeg progress: "time=HH:MM:SS.ss"
+      if (durationSeconds && durationSeconds > 0) {
+        const m = line.match(/time=(\d+):(\d+):(\d+\.\d+)/);
+        if (m) {
+          const secs = parseInt(m[1]) * 3600 + parseInt(m[2]) * 60 + parseFloat(m[3]);
+          const pct = Math.min(99, Math.round((secs / durationSeconds) * 100));
+          try {
+            await prisma.downloadJob.update({ where: { id: jobId }, data: { progress: pct } });
+            emitJobUpdate({ id: jobId, status: 'processing', progress: pct, speed: null, eta: null, error: null });
+          } catch { /* ignore */ }
+        }
+      }
+    });
+
     proc.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`ffmpeg exit ${code}`))));
     proc.on('error', reject);
   });
@@ -133,13 +158,16 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
   let fileName = files[0] ?? `${jobId}.mp4`;
   let localPath = path.join(DOWNLOAD_DIR, fileName);
 
-  // VP9 and AV1 in an MP4 container are not playable in QuickTime or most
-  // native players. Detect post-download and re-encode to h264.
-  const videoCodec = await getVideoCodec(localPath);
+  // VP9 and AV1 in MP4 are unplayable in QuickTime/most native players.
+  // Detect post-download, switch status to 'processing' so the UI shows the
+  // correct step, then re-encode to h264 with real progress updates.
+  const { codec: videoCodec, durationSeconds } = await getVideoInfo(localPath);
   if ((videoCodec === 'vp9' || videoCodec === 'av1') && localPath.endsWith('.mp4')) {
-    console.log(`[direct-worker] ${videoCodec.toUpperCase()} detected — re-encoding to h264 for compatibility`);
+    console.log(`[direct-worker] ${videoCodec!.toUpperCase()} detected — re-encoding to h264 (${durationSeconds?.toFixed(0) ?? '?'}s)`);
+    await prisma.downloadJob.update({ where: { id: jobId }, data: { status: 'processing', progress: 0 } });
+    emitJobUpdate({ id: jobId, status: 'processing', progress: 0, speed: null, eta: null, error: null });
     const h264Path = path.join(DOWNLOAD_DIR, `${jobId}_h264.mp4`);
-    await transcodeToH264(localPath, h264Path);
+    await transcodeToH264(localPath, h264Path, jobId, durationSeconds);
     fs.unlinkSync(localPath);
     fs.renameSync(h264Path, localPath);
     console.log(`[direct-worker] Re-encode complete → ${fileName}`);
