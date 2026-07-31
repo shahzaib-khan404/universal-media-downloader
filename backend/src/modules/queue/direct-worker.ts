@@ -30,7 +30,10 @@ function transcodeToH264(inputPath: string, outputPath: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const proc = spawn('ffmpeg', [
       '-i', inputPath,
-      '-c:v', 'libx264', '-crf', '23', '-preset', 'fast',
+      // CRF 17 = near-lossless for h264. CRF 23 (ffmpeg default) cuts 60-80%
+      // of the bitrate on 4K VP9 content which is clearly visible as loss of
+      // detail. Lower CRF = higher quality = larger file, which is expected.
+      '-c:v', 'libx264', '-crf', '17', '-preset', 'medium',
       '-c:a', 'copy',
       '-movflags', '+faststart',
       '-y', outputPath,

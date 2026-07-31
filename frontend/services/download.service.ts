@@ -50,6 +50,14 @@ interface MetadataResponse {
   audio: AudioOption[];
 }
 
+// Decode "fmtId:height:hasAudio" qualityId into a human-readable label.
+function resolutionFromQualityId(qualityId: unknown): string {
+  if (typeof qualityId !== 'string') return '';
+  const parts = qualityId.split(':');
+  const height = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
+  return !isNaN(height) && height > 0 ? `${height}p` : '';
+}
+
 // Maps the backend DownloadJob shape to the frontend DownloadJob type
 function mapJob(raw: Record<string, unknown>): DownloadJob {
   const result = raw.result as Record<string, unknown> | null;
@@ -59,7 +67,7 @@ function mapJob(raw: Record<string, unknown>): DownloadJob {
     mediaTitle: result?.fileName as string ?? '',
     mediaFilename: result?.fileName as string ?? '',
     mediaThumbnail: null,
-    resolution: result?.resolution as string ?? (raw.qualityId as string),
+    resolution: result?.resolution as string || resolutionFromQualityId(raw.qualityId),
     codec: result?.codec as string ?? '',
     container: '',
     totalSize: result?.fileSizeBytes
