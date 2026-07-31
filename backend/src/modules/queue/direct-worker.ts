@@ -164,6 +164,13 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
   const { codec: videoCodec, durationSeconds } = await getVideoInfo(localPath);
   if ((videoCodec === 'vp9' || videoCodec === 'av1') && localPath.endsWith('.mp4')) {
     console.log(`[direct-worker] ${videoCodec!.toUpperCase()} detected — re-encoding to h264 (${durationSeconds?.toFixed(0) ?? '?'}s)`);
+    // Job may have been deleted while yt-dlp was running — skip if gone.
+    const stillExists = await prisma.downloadJob.findUnique({ where: { id: jobId } });
+    if (!stillExists) {
+      console.log(`[direct-worker] Job ${jobId} was deleted — skipping transcode`);
+      try { fs.unlinkSync(localPath); } catch { /* ignore */ }
+      return;
+    }
     await prisma.downloadJob.update({ where: { id: jobId }, data: { status: 'processing', progress: 0 } });
     emitJobUpdate({ id: jobId, status: 'processing', progress: 0, speed: null, eta: null, error: null });
     const h264Path = path.join(DOWNLOAD_DIR, `${jobId}_h264.mp4`);
@@ -210,15 +217,19 @@ async function processNext() {
       // Requeue with exponential backoff delay
       const delay = Math.pow(2, jobAttempts) * 3000;
       console.log(`[direct-worker] Retrying job ${job.id} in ${delay / 1000}s`);
-      await prisma.downloadJob.update({ where: { id: job.id }, data: { status: 'queued', progress: 0 } });
-      emitJobUpdate({ id: job.id, status: 'queued', progress: 0, speed: null, eta: null, error: null });
+      try {
+        await prisma.downloadJob.update({ where: { id: job.id }, data: { status: 'queued', progress: 0 } });
+        emitJobUpdate({ id: job.id, status: 'queued', progress: 0, speed: null, eta: null, error: null });
+      } catch { /* job was deleted — nothing to requeue */ }
       setTimeout(() => { running = false; void processNext(); }, delay);
       return;
     }
 
     // All attempts exhausted
-    await prisma.downloadJob.update({ where: { id: job.id }, data: { status: 'failed', error: e.message } });
-    emitJobUpdate({ id: job.id, status: 'failed', progress: 0, speed: null, eta: null, error: e.message });
+    try {
+      await prisma.downloadJob.update({ where: { id: job.id }, data: { status: 'failed', error: e.message } });
+      emitJobUpdate({ id: job.id, status: 'failed', progress: 0, speed: null, eta: null, error: e.message });
+    } catch { /* job was deleted — nothing to mark failed */ }
     attempts.delete(job.id);
   } finally {
     if (running) running = false;
