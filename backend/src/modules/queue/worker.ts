@@ -7,6 +7,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { connection } from './queue.service';
 import { prisma } from '../../lib/prisma';
+import { emitJobUpdate } from '../../lib/event-bus';
+import { resolveYtDlpBinary } from '../../lib/binary';
 
 const DOWNLOAD_DIR = process.env.DOWNLOAD_DIR ?? path.join(process.cwd(), 'downloads');
 if (!fs.existsSync(DOWNLOAD_DIR)) fs.mkdirSync(DOWNLOAD_DIR, { recursive: true });
@@ -40,24 +42,30 @@ async function processDownload(job: Job<JobData>) {
     where: { id: jobId },
     data: { status: 'downloading', progress: 0 },
   });
+  emitJobUpdate({ id: jobId, status: 'downloading', progress: 0, speed: null, eta: null, error: null });
 
   const outputTemplate = path.join(DOWNLOAD_DIR, `${jobId}.%(ext)s`);
 
   const args = [
-    sourceUrl,
     '-o', outputTemplate,
     '--no-playlist',
     '--newline',
+    '--no-warnings',
   ];
 
   if (audioOnly) {
-    args.push('-x', '--audio-format', 'mp3');
+    args.push('-x', '--audio-format', 'mp3', '--audio-quality', '0', '--embed-thumbnail', '--add-metadata');
   } else {
-    args.push('-f', `${qualityId}+bestaudio/best`);
+    args.push('-f', `${qualityId}+bestaudio/best`, '--merge-output-format', 'mp4');
   }
 
+  // Argument injection defense: separate options from the target URL
+  args.push('--', sourceUrl);
+
+  const binary = resolveYtDlpBinary();
+
   await new Promise<void>((resolve, reject) => {
-    const proc = spawn('yt-dlp', args, { env: { ...process.env, PYTHONUNBUFFERED: '1' } });
+    const proc = spawn(binary, args, { env: { ...process.env, PYTHONUNBUFFERED: '1' } });
 
     proc.stdout.on('data', async (chunk: Buffer) => {
       const lines = chunk.toString().split('\n');
@@ -76,6 +84,14 @@ async function processDownload(job: Job<JobData>) {
               },
             });
             await job.updateProgress(progress);
+            emitJobUpdate({
+              id: jobId,
+              status: 'downloading',
+              progress: Math.round(progress),
+              speed: speed ?? null,
+              eta: eta ?? null,
+              error: null,
+            });
           } catch { /* db may be busy */ }
         }
       }
@@ -108,6 +124,7 @@ async function processDownload(job: Job<JobData>) {
     where: { id: jobId },
     data: { status: 'completed', progress: 100 },
   });
+  emitJobUpdate({ id: jobId, status: 'completed', progress: 100, speed: null, eta: null, error: null });
 
   console.log(`[worker] Job ${jobId} completed → ${fileName}`);
 }
@@ -125,6 +142,7 @@ const worker = new Worker<JobData>(
         where: { id: job.data.jobId },
         data: { status: 'failed', error: e.message },
       });
+      emitJobUpdate({ id: job.data.jobId, status: 'failed', progress: 0, speed: null, eta: null, error: e.message });
       throw err;
     }
   },

@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import { prisma } from '../../lib/prisma';
 import { emitJobUpdate } from '../../lib/event-bus';
 import { getStorage } from '../../lib/storage';
+import { resolveYtDlpBinary, resolveFfmpegBinary, resolveFfprobeBinary } from '../../lib/binary';
 
 const DOWNLOAD_DIR = process.env.DOWNLOAD_DIR ?? path.join(process.cwd(), 'downloads');
 if (!fs.existsSync(DOWNLOAD_DIR)) fs.mkdirSync(DOWNLOAD_DIR, { recursive: true });
@@ -15,7 +16,8 @@ interface VideoInfo {
 
 function getVideoInfo(filePath: string): Promise<VideoInfo> {
   return new Promise((resolve) => {
-    const proc = spawn('ffprobe', [
+    const ffprobeBin = resolveFfprobeBinary();
+    const proc = spawn(ffprobeBin, [
       '-v', 'quiet', '-print_format', 'json', '-show_streams', '-show_format', filePath,
     ]);
     let out = '';
@@ -39,7 +41,8 @@ function transcodeToH264(
   durationSeconds: number | null,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const proc = spawn('ffmpeg', [
+    const ffmpegBin = resolveFfmpegBinary();
+    const proc = spawn(ffmpegBin, [
       '-i', inputPath,
       '-c:v', 'libx264', '-crf', '17', '-preset', 'faster',
       '-c:a', 'copy',
@@ -88,48 +91,99 @@ function parseEta(line: string): string | null {
   return m ? m[1] : null;
 }
 
+import archiver from 'archiver';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const createArchive = (archiver as any).default || archiver;
+
+function isPlaylistUrl(url: string): boolean {
+  return /[?&]list=|(?:playlist|album|sets)\//i.test(url);
+}
+
+function zipDirectory(sourceDir: string, outZipPath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const output = fs.createWriteStream(outZipPath);
+    const archive = createArchive('zip', { zlib: { level: 6 } });
+    output.on('close', resolve);
+    archive.on('error', reject);
+    archive.pipe(output);
+    archive.directory(sourceDir, false);
+    archive.finalize();
+  });
+}
+
 async function runJob(jobId: string, sourceUrl: string, qualityId: string, audioOnly: boolean) {
   await prisma.downloadJob.update({ where: { id: jobId }, data: { status: 'downloading', progress: 0 } });
   emitJobUpdate({ id: jobId, status: 'downloading', progress: 0, speed: null, eta: null, error: null });
 
-  const outputTemplate = path.join(DOWNLOAD_DIR, `${jobId}.%(ext)s`);
-  // qualityId is encoded as "fmtId:height:hasAudio" (from metadata service).
-  // We use height-based format selection for all platforms so yt-dlp can prefer
-  // h264 (avc) over VP9 — VP9 in an MP4 container is dropped by most players.
-  const parts = qualityId.split(':');
-  const height = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
-  const h = !isNaN(height) && height > 0 ? height : 1080;
+  const isPlaylist = isPlaylistUrl(sourceUrl);
+  const jobFolder = path.join(DOWNLOAD_DIR, jobId);
 
-  const isCombined = parts.length >= 3 && parts[2] === '1';
+  let outputTemplate: string;
+  const args: string[] = ['--newline', '--js-runtimes', 'node'];
 
-  const args = [sourceUrl, '-o', outputTemplate, '--no-playlist', '--newline', '--js-runtimes', 'node'];
+  if (isPlaylist) {
+    if (!fs.existsSync(jobFolder)) fs.mkdirSync(jobFolder, { recursive: true });
+    outputTemplate = path.join(jobFolder, '%(playlist_index)02d - %(title)s.%(ext)s');
+    args.push('-o', outputTemplate, '--yes-playlist');
+  } else {
+    outputTemplate = path.join(DOWNLOAD_DIR, `${jobId}.%(ext)s`);
+    args.push('-o', outputTemplate, '--no-playlist');
+  }
+
+  // Determine format flags
   if (audioOnly) {
-    args.push('-x', '--audio-format', 'mp3');
-  } else if (isCombined) {
-    // Combined audio+video stream (Instagram, TikTok, Facebook).
-    // Sort: height DESC then bitrate DESC — resolution is the priority.
+    let audioFormat = 'mp3';
+    let audioQuality = '320k';
+
+    if (qualityId.includes('flac')) {
+      audioFormat = 'flac';
+    } else if (qualityId.includes('m4a')) {
+      audioFormat = 'm4a';
+    } else if (qualityId.includes('192')) {
+      audioQuality = '192k';
+    }
+
     args.push(
-      '-f', `best[height<=${h}]/best`,
-      '--format-sort', 'height,br',
-      '--merge-output-format', 'mp4',
+      '-x',
+      '--audio-format', audioFormat,
+      '--audio-quality', audioQuality,
+      '--embed-thumbnail',
+      '--add-metadata'
     );
   } else {
-    // Separate video+audio DASH streams (YouTube, Vimeo, etc.).
-    // Sort: height DESC then bitrate DESC — resolution is the priority.
-    // Codec is a tiebreaker only; h264 preference comes AFTER we have the
-    // right resolution. Without the sort, [vcodec^=avc] picks 960p h264
-    // over 1920p VP9 when the user asked for 1920p.
-    args.push(
-      '-f', `bestvideo[height<=${h}]+bestaudio/best[height<=${h}]/best`,
-      '--format-sort', 'height,br',
-      '--merge-output-format', 'mp4',
-    );
+    const parts = qualityId.split(':');
+    const height = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
+    const h = !isNaN(height) && height > 0 ? height : 1080;
+    const isCombined = parts.length >= 3 && parts[2] === '1';
+
+    if (isCombined) {
+      args.push(
+        '-f', `best[height<=${h}]/best`,
+        '--format-sort', 'height,br',
+        '--merge-output-format', 'mp4'
+      );
+    } else {
+      args.push(
+        '-f', `bestvideo[height<=${h}]+bestaudio/best[height<=${h}]/best`,
+        '--format-sort', 'height,br',
+        '--merge-output-format', 'mp4'
+      );
+    }
   }
+
+  const ffmpegLocation = resolveFfmpegBinary();
+  if (ffmpegLocation && ffmpegLocation !== 'ffmpeg') {
+    args.push('--ffmpeg-location', path.dirname(ffmpegLocation));
+  }
+
+  // Argument injection defense: separate options from the target URL
+  args.push('--', sourceUrl);
 
   console.log(`[direct-worker] yt-dlp args: ${args.join(' ')}`);
 
   await new Promise<void>((resolve, reject) => {
-    const proc = spawn('yt-dlp', args, { env: { ...process.env, PYTHONUNBUFFERED: '1' } });
+    const binary = resolveYtDlpBinary();
+    const proc = spawn(binary, args, { env: { ...process.env, PYTHONUNBUFFERED: '1' } });
 
     proc.stdout.on('data', async (chunk: Buffer) => {
       for (const line of chunk.toString().split('\n')) {
@@ -153,31 +207,44 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
     proc.on('error', reject);
   });
 
-  // Locate output file
-  const files = fs.readdirSync(DOWNLOAD_DIR).filter((f) => f.startsWith(jobId));
-  let fileName = files[0] ?? `${jobId}.mp4`;
-  let localPath = path.join(DOWNLOAD_DIR, fileName);
+  let fileName: string;
+  let localPath: string;
 
-  // VP9 and AV1 in MP4 are unplayable in QuickTime/most native players.
-  // Detect post-download, switch status to 'processing' so the UI shows the
-  // correct step, then re-encode to h264 with real progress updates.
-  const { codec: videoCodec, durationSeconds } = await getVideoInfo(localPath);
-  if ((videoCodec === 'vp9' || videoCodec === 'av1') && localPath.endsWith('.mp4')) {
-    console.log(`[direct-worker] ${videoCodec!.toUpperCase()} detected — re-encoding to h264 (${durationSeconds?.toFixed(0) ?? '?'}s)`);
-    // Job may have been deleted while yt-dlp was running — skip if gone.
-    const stillExists = await prisma.downloadJob.findUnique({ where: { id: jobId } });
-    if (!stillExists) {
-      console.log(`[direct-worker] Job ${jobId} was deleted — skipping transcode`);
-      try { fs.unlinkSync(localPath); } catch { /* ignore */ }
-      return;
+  if (isPlaylist) {
+    // Switch status to packaging zip
+    await prisma.downloadJob.update({ where: { id: jobId }, data: { status: 'processing', progress: 95 } });
+    emitJobUpdate({ id: jobId, status: 'processing', progress: 95, speed: null, eta: null, error: null });
+
+    fileName = `${jobId}_album.zip`;
+    localPath = path.join(DOWNLOAD_DIR, fileName);
+    await zipDirectory(jobFolder, localPath);
+
+    // Clean up temporary folder
+    try {
+      fs.rmSync(jobFolder, { recursive: true, force: true });
+    } catch { /* ignore */ }
+  } else {
+    // Locate single output file
+    const files = fs.readdirSync(DOWNLOAD_DIR).filter((f) => f.startsWith(jobId) && !f.endsWith('.tmp'));
+    fileName = files[0] ?? `${jobId}.${audioOnly ? 'mp3' : 'mp4'}`;
+    localPath = path.join(DOWNLOAD_DIR, fileName);
+
+    if (!audioOnly && localPath.endsWith('.mp4')) {
+      const { codec: videoCodec, durationSeconds } = await getVideoInfo(localPath);
+      if (videoCodec === 'vp9' || videoCodec === 'av1') {
+        console.log(`[direct-worker] ${videoCodec.toUpperCase()} detected — re-encoding to h264 (${durationSeconds?.toFixed(0) ?? '?'}s)`);
+        const stillExists = await prisma.downloadJob.findUnique({ where: { id: jobId } });
+        if (stillExists) {
+          await prisma.downloadJob.update({ where: { id: jobId }, data: { status: 'processing', progress: 0 } });
+          emitJobUpdate({ id: jobId, status: 'processing', progress: 0, speed: null, eta: null, error: null });
+          const h264Path = path.join(DOWNLOAD_DIR, `${jobId}_h264.mp4`);
+          await transcodeToH264(localPath, h264Path, jobId, durationSeconds);
+          try { fs.unlinkSync(localPath); } catch { /* ignore */ }
+          fs.renameSync(h264Path, localPath);
+          console.log(`[direct-worker] Re-encode complete → ${fileName}`);
+        }
+      }
     }
-    await prisma.downloadJob.update({ where: { id: jobId }, data: { status: 'processing', progress: 0 } });
-    emitJobUpdate({ id: jobId, status: 'processing', progress: 0, speed: null, eta: null, error: null });
-    const h264Path = path.join(DOWNLOAD_DIR, `${jobId}_h264.mp4`);
-    await transcodeToH264(localPath, h264Path, jobId, durationSeconds);
-    fs.unlinkSync(localPath);
-    fs.renameSync(h264Path, localPath);
-    console.log(`[direct-worker] Re-encode complete → ${fileName}`);
   }
 
   const storage = getStorage();

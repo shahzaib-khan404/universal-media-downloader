@@ -109,77 +109,79 @@ export function PricingPlans() {
     <div className="space-y-20">
       {/* Billing toggle */}
       <div className="flex items-center justify-center gap-3">
-        <span className={`text-sm ${billing === 'monthly' ? 'text-white' : 'text-muted'}`}>
+        <span className={`text-sm font-semibold ${billing === 'monthly' ? 'text-slate-900' : 'text-slate-500'}`}>
           Monthly
         </span>
         <button
           onClick={() => setBilling(billing === 'monthly' ? 'yearly' : 'monthly')}
-          className={`relative h-6 w-11 rounded-full transition-colors ${
-            billing === 'yearly' ? 'bg-accent' : 'bg-surface2'
+          className={`relative h-7 w-12 rounded-full transition-all duration-300 border border-slate-300 p-0.5 ${
+            billing === 'yearly' ? 'bg-[#FF6B00]' : 'bg-slate-200'
           }`}
         >
           <span
-            className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-              billing === 'yearly' ? 'translate-x-6' : 'translate-x-1'
+            className={`block h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-300 ${
+              billing === 'yearly' ? 'translate-x-5' : 'translate-x-0'
             }`}
           />
         </button>
-        <span className={`text-sm ${billing === 'yearly' ? 'text-white' : 'text-muted'}`}>
+        <span className={`text-sm font-semibold ${billing === 'yearly' ? 'text-slate-900' : 'text-slate-500'}`}>
           Yearly
         </span>
-        <span className="rounded-full bg-amber-400/10 px-2.5 py-0.5 text-xs font-semibold text-amber-400">
-          2 months free
+        <span className="rounded-full bg-[#FF6B00]/15 border border-[#FF6B00]/30 px-3 py-1 text-xs font-bold text-[#FF6B00] shadow-sm">
+          2 months free ✨
         </span>
       </div>
 
       {/* Plans */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-3">
         {plans.map((plan) => (
           <div
             key={plan.name}
-            className={`relative rounded-3xl border p-7 ${
+            className={`relative rounded-3xl p-8 transition-all duration-300 ${
               plan.highlighted
-                ? 'border-accent bg-surface shadow-[0_0_40px_rgba(124,118,255,0.12)]'
-                : 'border-border bg-surface'
+                ? 'bg-gradient-to-b from-[#FFF0E5] via-[#FFE5D3] to-[#FED7BA] border-2 border-[#FF6B00] shadow-[0_15px_40px_rgba(255,107,0,0.25)] -translate-y-2'
+                : 'bg-gradient-to-b from-[#FFF8F3] to-[#FFEEDB] border border-[#FF6B00]/30 hover:border-[#FF6B00] hover:shadow-[0_10px_30px_rgba(255,107,0,0.18)] hover:-translate-y-1 shadow-sm'
             }`}
           >
             {plan.badge && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-white">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                <span className="rounded-full bg-gradient-to-r from-[#FF6B00] to-[#FFA040] px-4 py-1 text-xs font-bold text-white shadow-md uppercase tracking-wider">
                   {plan.badge}
                 </span>
               </div>
             )}
 
-            <h3 className="text-lg font-semibold text-white">{plan.name}</h3>
-            <p className="mt-1 text-sm text-muted">{plan.desc}</p>
+            <h3 className="text-xl font-bold text-slate-900">{plan.name}</h3>
+            <p className="mt-1 text-sm text-slate-600 font-medium">{plan.desc}</p>
 
             <div className="my-6">
-              <span className={`font-bold text-white ${plan.bigPrice ? 'text-4xl' : 'text-5xl'}`}>
+              <span className={`font-black text-slate-900 tracking-tight ${plan.bigPrice ? 'text-4xl' : 'text-5xl'}`}>
                 {billing === 'monthly' ? plan.price.monthly : plan.price.yearly}
               </span>
               {plan.price.monthly !== 'Custom' && (
-                <span className="text-sm text-muted">/mo</span>
+                <span className="text-sm font-semibold text-slate-500 ml-1">/mo</span>
               )}
             </div>
 
-            <ul className="mb-8 space-y-3">
+            <ul className="mb-8 space-y-3.5">
               {plan.features.map((f) => (
-                <li key={f} className="flex items-start gap-2 text-sm">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
-                  <span className="text-muted">{f}</span>
+                <li key={f} className="flex items-start gap-2.5 text-sm">
+                  <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#FF6B00]/15 text-[#FF6B00]">
+                    <Check className="h-3 w-3 stroke-[3]" />
+                  </div>
+                  <span className="text-slate-700 font-medium">{f}</span>
                 </li>
               ))}
             </ul>
 
             {plan.ctaStyle === 'default' && (
-              <Button className="w-full">{plan.cta}</Button>
+              <Button className="w-full btn-3d-orange font-bold py-6 text-base text-white">{plan.cta}</Button>
             )}
             {plan.ctaStyle === 'secondary' && (
-              <Button variant="secondary" className="w-full">{plan.cta}</Button>
+              <Button variant="secondary" className="w-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-900 font-semibold py-6 text-base">{plan.cta}</Button>
             )}
             {plan.ctaStyle === 'ghost' && (
-              <p className="text-center text-sm text-muted">{plan.cta}</p>
+              <p className="text-center text-sm font-medium text-slate-500 py-3">{plan.cta}</p>
             )}
           </div>
         ))}
@@ -187,34 +189,34 @@ export function PricingPlans() {
 
       {/* Comparison table */}
       <section>
-        <h2 className="mb-8 text-center text-2xl font-semibold text-white">
-          Compare capabilities
+        <h2 className="mb-8 text-center text-3xl font-extrabold text-slate-900">
+          Compare <span className="text-[#FF6B00]">Capabilities</span>
         </h2>
-        <div className="overflow-hidden rounded-3xl border border-border">
+        <div className="overflow-hidden rounded-3xl glass-panel border border-slate-200 shadow-sm">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-surface2">
+              <tr className="border-b border-slate-200 bg-slate-50/80">
                 {['Technical Feature', 'Free', 'Pro', 'Enterprise'].map((h) => (
                   <th
                     key={h}
-                    className="px-6 py-4 text-left text-[10px] font-semibold uppercase tracking-wider text-muted/60"
+                    className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-600"
                   >
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-border bg-surface">
+            <tbody className="divide-y divide-slate-200/80">
               {comparisons.map(({ feature, free, pro, ent, proAccent }) => (
-                <tr key={feature}>
-                  <td className="px-6 py-4 text-sm text-muted">{feature}</td>
-                  <td className="px-6 py-4 text-sm text-muted">
-                    {free === null ? <X className="h-4 w-4 text-muted/30" /> : free}
+                <tr key={feature} className="hover:bg-orange-50/40 transition-colors">
+                  <td className="px-6 py-4 text-sm font-bold text-slate-900">{feature}</td>
+                  <td className="px-6 py-4 text-sm text-slate-500">
+                    {free === null ? <X className="h-4 w-4 text-slate-400" /> : free}
                   </td>
-                  <td className={`px-6 py-4 text-sm ${proAccent ? 'font-medium text-accent' : 'text-muted'}`}>
+                  <td className={`px-6 py-4 text-sm ${proAccent ? 'font-bold text-[#FF6B00]' : 'text-slate-700'}`}>
                     {pro}
                   </td>
-                  <td className="px-6 py-4 text-sm text-muted">{ent}</td>
+                  <td className="px-6 py-4 text-sm font-medium text-slate-700">{ent}</td>
                 </tr>
               ))}
             </tbody>
@@ -224,53 +226,55 @@ export function PricingPlans() {
 
       {/* Testimonials */}
       <section>
-        <h2 className="mb-8 text-center text-2xl font-semibold text-white">
-          Trusted by 2M+ Creators
+        <h2 className="mb-8 text-center text-3xl font-extrabold text-slate-900">
+          Loved by <span className="text-[#FF6B00]">2M+ Creators</span> Worldwide
         </h2>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-3">
           {testimonials.map(({ quote, name, role, initials }) => (
-            <Card key={name} className="flex flex-col gap-5 p-6">
-              <div className="flex gap-0.5">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
-                ))}
+            <div key={name} className="bg-gradient-to-b from-[#FFF8F3] to-[#FFEEDB] flex flex-col justify-between gap-5 p-7 rounded-3xl border border-[#FF6B00]/30 hover:border-[#FF6B00] transition-all hover:-translate-y-1 shadow-[0_10px_25px_-5px_rgba(255,107,0,0.12)]">
+              <div>
+                <div className="flex gap-1 mb-4">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={i} className="h-4 w-4 fill-[#FF6B00] text-[#FF6B00]" />
+                  ))}
+                </div>
+                <p className="text-sm leading-relaxed text-slate-800 font-normal">{quote}</p>
               </div>
-              <p className="text-sm leading-6 text-muted">{quote}</p>
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold text-accent">
+              <div className="flex items-center gap-3 pt-4 border-t border-[#FF6B00]/20">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF6B00] to-[#E05300] text-sm font-black text-white shadow-sm">
                   {initials}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-white">{name}</p>
-                  <p className="text-xs text-muted">{role}</p>
+                  <p className="text-sm font-bold text-slate-900">{name}</p>
+                  <p className="text-xs text-[#FF6B00] font-semibold">{role}</p>
                 </div>
               </div>
-            </Card>
+            </div>
           ))}
         </div>
       </section>
 
       {/* FAQ */}
       <section>
-        <h2 className="mb-8 text-center text-2xl font-semibold text-white">
+        <h2 className="mb-8 text-center text-3xl font-extrabold text-slate-900">
           Frequently Asked Questions
         </h2>
-        <div className="mx-auto max-w-2xl space-y-2">
+        <div className="mx-auto max-w-2xl space-y-3">
           {faqs.map(({ q, a }, i) => (
-            <div key={i} className="overflow-hidden rounded-2xl border border-border">
+            <div key={i} className="overflow-hidden rounded-2xl bg-gradient-to-r from-[#FFF8F3] to-[#FFF1E6] border border-[#FF6B00]/30 shadow-sm">
               <button
                 onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                className="flex w-full items-center justify-between p-5 text-left text-sm font-medium text-white transition-colors hover:bg-surface2"
+                className="flex w-full items-center justify-between p-5 text-left text-sm font-bold text-slate-900 transition-colors hover:bg-orange-100/50"
               >
                 {q}
                 <ChevronDown
-                  className={`h-4 w-4 shrink-0 text-muted transition-transform duration-200 ${
+                  className={`h-4 w-4 shrink-0 text-[#FF6B00] transition-transform duration-200 ${
                     openFaq === i ? 'rotate-180' : ''
                   }`}
                 />
               </button>
               {openFaq === i && (
-                <div className="border-t border-border px-5 py-4 text-sm leading-6 text-muted">
+                <div className="border-t border-[#FF6B00]/20 px-5 py-4 text-sm leading-6 text-slate-700 font-medium bg-white/70">
                   {a}
                 </div>
               )}
@@ -280,17 +284,18 @@ export function PricingPlans() {
       </section>
 
       {/* Bottom CTA */}
-      <section className="rounded-3xl bg-gradient-to-br from-accentSoft/80 to-accent/70 p-12 text-center">
-        <h2 className="text-3xl font-semibold text-white">Ready to supercharge your media?</h2>
-        <p className="mx-auto mt-4 max-w-lg text-sm text-white/70">
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#FFF5ED] via-[#FFEADB] to-[#FEDBC0] border border-[#FF6B00]/30 p-12 text-center shadow-[0_15px_40px_-5px_rgba(255,107,0,0.22)]">
+        <div className="absolute -top-24 left-1/2 -translate-x-1/2 h-48 w-96 rounded-full bg-[#FF6B00]/15 blur-3xl pointer-events-none" />
+        <h2 className="relative text-3xl md:text-4xl font-black text-slate-900">Ready to supercharge your media?</h2>
+        <p className="relative mx-auto mt-4 max-w-lg text-sm text-slate-700 font-medium leading-relaxed">
           Join over 2 million professionals using Universal Media Downloader to streamline their
-          content acquisition.
+          content acquisition with 3D ultra-speed extraction.
         </p>
-        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-          <button className="inline-flex items-center justify-center rounded-full bg-white px-8 py-3 text-sm font-semibold text-indigo-900 transition-colors hover:bg-white/90">
+        <div className="relative mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+          <button className="btn-3d-orange px-8 py-3.5 text-sm font-bold text-white rounded-2xl shadow-md">
             Start 14-Day Free Pro Trial
           </button>
-          <Button variant="ghost" className="text-white/80 hover:text-white">
+          <Button variant="ghost" className="text-slate-700 hover:bg-slate-100 rounded-2xl px-6 font-semibold">
             Contact Sales
           </Button>
         </div>

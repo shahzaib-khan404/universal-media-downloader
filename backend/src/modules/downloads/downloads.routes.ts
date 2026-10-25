@@ -2,17 +2,31 @@ import type { FastifyPluginAsync } from 'fastify';
 import { downloadsController } from './downloads.controller';
 
 export const downloadsRoutes: FastifyPluginAsync = async (app) => {
-  // Public: fetch media metadata + quality options
-  app.post('/metadata', downloadsController.fetchMetadata);
+  // Public: fetch media metadata + quality options (stricter limit to prevent yt-dlp scraping abuse)
+  app.post('/metadata', {
+    config: {
+      rateLimit: {
+        max: 30,
+        timeWindow: '1 minute',
+      },
+    },
+  }, downloadsController.fetchMetadata);
 
-  // Optional auth: create a job (works for anonymous users too)
-  app.post('/', downloadsController.createJob);
+  // Optional auth: create a job (works for anonymous users too, throttled to 20/min to mitigate resource exhaustion)
+  app.post('/', {
+    config: {
+      rateLimit: {
+        max: 20,
+        timeWindow: '1 minute',
+      },
+    },
+  }, downloadsController.createJob);
 
   // Get single job status (public — needed for progress polling)
   app.get('/:id', downloadsController.getJob);
 
-  // Protected: list all jobs for current user
-  app.get('/', { preHandler: [app.authenticate] }, downloadsController.listJobs);
+  // List all jobs (scoped to user if authenticated, or recent jobs for guest session)
+  app.get('/', downloadsController.listJobs);
 
   // Protected: delete a job
   app.delete('/:id', { preHandler: [app.authenticate] }, downloadsController.deleteJob);

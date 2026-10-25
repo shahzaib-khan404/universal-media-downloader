@@ -1,65 +1,96 @@
-import { Zap, MonitorPlay, Music, ListVideo, Tag, Shield } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { Zap, MonitorPlay, Music, ListVideo, Tag, Shield, Sparkles } from 'lucide-react';
 
 const features = [
   {
     Icon: Zap,
-    title: 'Fast Downloads',
+    title: 'Turbocharged Multi-Threaded Engine',
     description:
-      "Parallelized chunking algorithms ensure you're using 100% of your bandwidth capacity.",
+      "Parallelized stream segment algorithms download at 100% of your maximum network bandwidth without drops.",
+    glow: 'from-[#FF6B00] to-[#FFA766]',
   },
   {
     Icon: MonitorPlay,
-    title: '4K & 8K Support',
+    title: 'Cinematic 4K & 8K HDR Support',
     description:
-      'Preserve every pixel. Download in original resolution, from 720p up to cinematic 8K UHD.',
+      'Preserve every crisp detail. Extract at full native resolution with crisp 60fps frame rate and HDR10 color fidelity.',
+    glow: 'from-[#FF8833] to-[#FF4500]',
   },
   {
     Icon: Music,
-    title: 'Audio Extraction',
+    title: 'Studio-Grade 320 kbps Audio',
     description:
-      'Seamlessly convert video to high-fidelity MP3, FLAC, or M4A with intelligent bit-rate selection.',
+      'Instant extraction to MP3 320k, M4A, or FLAC lossless with automatic volume normalization.',
+    glow: 'from-[#FF5E00] to-[#FF9900]',
   },
   {
     Icon: ListVideo,
-    title: 'Playlist Downloads',
+    title: 'One-Click Full Album / Playlist ZIP',
     description:
-      "Don't do it manually. Fetch entire YouTube playlists or Spotify albums in a single click.",
+      "Archive complete YouTube playlists, SoundCloud albums, or courses bundled cleanly into a single organized ZIP archive.",
+    glow: 'from-[#FF7A1A] to-[#FFB77D]',
   },
   {
     Icon: Tag,
-    title: 'Metadata Support',
+    title: 'Smart Metadata & Cover Art Embedding',
     description:
-      'Automatic tagging. Thumbnails, artist info, and timestamps are embedded into every file.',
+      'Original artist names, track numbers, and HD poster artwork are written directly into media ID3 tags.',
+    glow: 'from-[#FF6B00] to-[#FFAA66]',
   },
   {
     Icon: Shield,
-    title: 'No Ads',
+    title: '100% Ad-Free & Sandboxed Security',
     description:
-      'Clean, minimalist experience. No popups, no trackers, no malware. Pure utility.',
+      'Zero ads, zero redirects, zero telemetry trackers. Completely private media conversion on secure servers.',
+    glow: 'from-[#FF8833] to-[#FF5500]',
   },
 ];
 
 export function FeatureGrid() {
   return (
-    <section>
-      <div className="mb-10">
-        <h2 className="text-3xl font-semibold text-white">Engineered for Performance</h2>
-        <p className="mt-3 max-w-md text-sm leading-7 text-muted">
-          Every feature is designed to eliminate friction between finding media and owning it.
+    <section className="relative">
+      {/* Background ambient blur */}
+      <div 
+        aria-hidden="true" 
+        className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[300px] bg-accent/10 blur-[120px] rounded-full -z-10" 
+      />
+
+      <div className="mb-12 text-center sm:text-left">
+        <div className="inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent/10 px-3.5 py-1 text-xs font-bold text-accent mb-3">
+          <Sparkles className="h-3.5 w-3.5" />
+          Engineered for Peak Performance
+        </div>
+        <h2 className="text-3xl font-extrabold text-slate-900 sm:text-4xl">
+          Everything You Need to Archive the Web
+        </h2>
+        <p className="mt-3 max-w-lg text-sm leading-6 text-slate-600 font-medium">
+          Designed with fluid glass aesthetics and high-performance workers to make media saving effortless.
         </p>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {features.map(({ Icon, title, description }) => (
-          <Card key={title} className="flex flex-col gap-5 p-7 transition-colors hover:border-accent/40">
-            <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-surface2">
-              <Icon className="h-5 w-5 text-accent" />
+
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {features.map(({ Icon, title, description, glow }) => (
+          <div
+            key={title}
+            className="group relative flex flex-col justify-between rounded-3xl bg-gradient-to-b from-[#FFF5ED] via-[#FFEADB] to-[#FEDBC0] border border-[#FF6B00]/30 p-7 shadow-[0_10px_25px_-5px_rgba(255,107,0,0.18)] transition-all duration-300 hover:-translate-y-2 hover:border-[#FF6B00] hover:shadow-[0_20px_40px_-8px_rgba(255,107,0,0.32)]"
+          >
+            {/* Top decorative glass corner */}
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#FF6B00] to-[#FFA766] p-0.5 shadow-md shadow-orange-500/25">
+                <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-white transition-colors group-hover:bg-[#FFF5ED]">
+                  <Icon className="h-5 w-5 text-[#FF6B00]" />
+                </div>
+              </div>
             </div>
+
             <div>
-              <h3 className="font-semibold text-white">{title}</h3>
-              <p className="mt-2 text-sm leading-6 text-muted">{description}</p>
+              <h3 className="text-base font-extrabold text-slate-900 transition-colors group-hover:text-[#FF5E00]">
+                {title}
+              </h3>
+              <p className="mt-2 text-xs leading-5 text-slate-700 font-medium">
+                {description}
+              </p>
             </div>
-          </Card>
+          </div>
         ))}
       </div>
     </section>

@@ -3,10 +3,10 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background-color: #050512;
-  color: #e4e7ff;
+  color-scheme: light;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #F8FAFC;
+  color: #0F172A;
 }
 
 html {
@@ -16,9 +16,14 @@ html {
 body {
   min-height: 100vh;
   margin: 0;
-  background: radial-gradient(circle at top, rgba(124, 118, 255, 0.09), transparent 24%),
-    radial-gradient(circle at 80% 10%, rgba(95, 255, 204, 0.06), transparent 20%),
-    #050512;
+  background: 
+    radial-gradient(circle at 50% -5%, rgba(255, 107, 0, 0.12), transparent 45%),
+    radial-gradient(circle at 90% 25%, rgba(255, 136, 51, 0.08), transparent 40%),
+    radial-gradient(circle at 10% 45%, rgba(255, 107, 0, 0.06), transparent 35%),
+    #F8FAFC;
+  background-attachment: fixed;
+  overflow-x: hidden;
+  color: #0F172A;
 }
 
 * {
@@ -26,15 +31,73 @@ body {
 }
 
 ::selection {
-  background-color: rgba(124, 118, 255, 0.35);
-  color: white;
+  background-color: rgba(255, 107, 0, 0.25);
+  color: #FF5E00;
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
+/* Glassmorphism helpers for Light Mode */
+.glass-panel {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 245, 237, 0.75) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 107, 0, 0.22);
+  border-top: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 10px 30px -5px rgba(255, 107, 0, 0.08), 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+.glass-panel-elevated {
+  background: linear-gradient(180deg, rgba(255, 248, 243, 0.92) 0%, rgba(255, 235, 219, 0.88) 100%);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 107, 0, 0.40);
+  border-top: 1px solid rgba(255, 255, 255, 1);
+  box-shadow: 0 20px 45px -10px rgba(255, 107, 0, 0.22), 0 8px 20px -6px rgba(255, 107, 0, 0.08);
+}
+
+/* 3D Glass Orbs */
+.orb-3d {
+  border-radius: 9999px;
+  background: radial-gradient(circle at 35% 25%, #FFA766 0%, #FF6B00 55%, #D94800 100%);
+  box-shadow: 
+    0 15px 35px rgba(255, 107, 0, 0.35),
+    inset -4px -4px 12px rgba(180, 50, 0, 0.4),
+    inset 4px 4px 10px rgba(255, 255, 255, 0.8);
+}
+
+.orb-glass {
+  border-radius: 9999px;
+  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.4) 60%, rgba(255, 107, 0, 0.12) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  box-shadow: 
+    0 12px 30px rgba(15, 23, 42, 0.08),
+    inset -4px -4px 12px rgba(255, 107, 0, 0.15),
+    inset 4px 4px 12px rgba(255, 255, 255, 0.9);
+}
+
+/* 3D Tactile Orange CTA Button */
+.btn-3d-orange {
+  background: linear-gradient(180deg, #FF8833 0%, #FF5E00 100%);
+  box-shadow: 
+    0 10px 22px -4px rgba(255, 107, 0, 0.45),
+    inset 0 1px 1px rgba(255, 255, 255, 0.6),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.btn-3d-orange:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 
+    0 15px 28px -4px rgba(255, 107, 0, 0.55),
+    inset 0 1px 1px rgba(255, 255, 255, 0.75),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.btn-3d-orange:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: 
+    0 4px 12px -2px rgba(255, 107, 0, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.35);
 }
 
 .container {

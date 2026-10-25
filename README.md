@@ -1,26 +1,31 @@
 # Universal Media Downloader
 
-This repository is transitioning to a modern SaaS monorepo structure with:
-- `frontend/`: Next.js 15 app for web UI
-- `backend/`: Fastify API and download orchestration
-- root CLI tooling: legacy downloader package
+This repository is a modern full-stack media extraction monorepo with:
+- `frontend/`: Next.js 15 app with playful 3D obsidian & tangerine orange glassmorphic UI (`#FF6B00`)
+- `backend/`: Fastify API with SSE telemetry, SQLite/PostgreSQL persistence, and BullMQ/Direct download workers
+- Root CLI tooling: Legacy terminal downloader & Electron desktop wrapper
 
-Download media from 1000+ websites including YouTube, Twitter/X, Instagram, TikTok, Vimeo, Reddit, and more — powered by [yt-dlp](https://github.com/yt-dlp/yt-dlp).
+Download 8K/4K video, 320 kbps MP3 tracks, and full album `.zip` packages from 1,800+ websites powered by native `yt-dlp` and `ffmpeg`.
 
-## Setup
+## Setup & Running
 
-Frontend and backend have separate install steps:
-
+### 1. Web Application
 ```bash
-cd frontend
+# Backend (Fastify API on :4000)
+cd backend
+npm install
+npm run dev
+
+# Frontend (Next.js 15 on :3000)
+cd ../frontend
 npm install
 npm run dev
 ```
 
+### 2. Native Desktop Application
 ```bash
-cd backend
-npm install
-npm run dev
+# In the repository root:
+npm run desktop
 ```
 
 ## Usage

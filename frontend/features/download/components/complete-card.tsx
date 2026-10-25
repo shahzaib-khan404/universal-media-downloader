@@ -64,20 +64,20 @@ export function CompleteCard({ job, thumbnail }: CompleteCardProps) {
     <div className="flex flex-col items-center gap-6 py-6 sm:gap-10 sm:py-8">
       {/* Success icon */}
       <div className="flex flex-col items-center gap-4 text-center">
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-accent/10">
-          <CheckCircle2 className="h-10 w-10 text-accent" />
+        <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-[#FF6B00] to-[#E05300] shadow-[0_10px_30px_rgba(255,107,0,0.5)] border border-white/20">
+          <CheckCircle2 className="h-12 w-12 text-white" />
         </div>
         <div>
-          <h2 className="text-2xl font-semibold text-white">Downloaded Successfully</h2>
-          <p className="mt-2 text-sm text-muted">Your high-resolution media is ready for playback.</p>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Downloaded Successfully!</h2>
+          <p className="mt-2 text-sm text-slate-600 font-medium">Your high-resolution media has been packaged and is ready.</p>
         </div>
       </div>
 
       {/* File info card */}
-      <Card className="w-full max-w-xl p-5">
-        <div className="flex gap-4">
+      <div className="w-full max-w-xl glass-panel-elevated rounded-3xl p-6 border border-slate-200 shadow-xl">
+        <div className="flex flex-col sm:flex-row gap-5">
           {/* Thumbnail */}
-          <div className="h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-surface2">
+          <div className="h-44 sm:h-24 w-full sm:w-32 shrink-0 overflow-hidden rounded-2xl bg-slate-100 border border-slate-200">
             {thumbnail && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -90,23 +90,23 @@ export function CompleteCard({ job, thumbnail }: CompleteCardProps) {
           </div>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-white">{job.mediaFilename}</p>
-            <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+            <p className="truncate text-base font-bold text-slate-900">{job.mediaFilename}</p>
+            <div className="mt-3.5 grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs">
               <div>
-                <p className="text-muted/60 uppercase tracking-widest text-[10px]">Resolution</p>
-                <p className="mt-0.5 font-medium text-white">{job.resolution}</p>
+                <p className="text-slate-500 uppercase tracking-widest text-[10px] font-bold">Resolution</p>
+                <p className="mt-0.5 font-bold text-[#FF6B00]">{job.resolution || 'Original'}</p>
               </div>
               <div>
-                <p className="text-muted/60 uppercase tracking-widest text-[10px]">Codec</p>
-                <p className="mt-0.5 font-medium text-white">{job.codec}</p>
+                <p className="text-slate-500 uppercase tracking-widest text-[10px] font-bold">Codec</p>
+                <p className="mt-0.5 font-semibold text-slate-800">{job.codec || 'Auto'}</p>
               </div>
               <div>
-                <p className="text-muted/60 uppercase tracking-widest text-[10px]">Size</p>
-                <p className="mt-0.5 font-medium text-white">{job.fileSize ?? job.totalSize}</p>
+                <p className="text-slate-500 uppercase tracking-widest text-[10px] font-bold">Size</p>
+                <p className="mt-0.5 font-semibold text-slate-900">{job.fileSize ?? job.totalSize ?? 'Complete'}</p>
               </div>
               <div>
-                <p className="text-muted/60 uppercase tracking-widest text-[10px]">Status</p>
-                <p className="mt-0.5 flex items-center gap-1 font-medium text-green-400">
+                <p className="text-slate-500 uppercase tracking-widest text-[10px] font-bold">Status</p>
+                <p className="mt-0.5 flex items-center gap-1 font-bold text-emerald-600">
                   <CheckCircle2 className="h-3 w-3" />
                   Verified
                 </p>
@@ -117,43 +117,49 @@ export function CompleteCard({ job, thumbnail }: CompleteCardProps) {
 
         {/* Source URL row */}
         {job.url && (
-          <div className="mt-4 flex items-center gap-2 rounded-xl border border-border bg-surface2 px-3 py-2">
-            <span className="min-w-0 flex-1 truncate text-xs text-muted">{job.url}</span>
+          <div className="mt-5 flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5">
+            <span className="min-w-0 flex-1 truncate text-xs text-slate-600 font-mono">{job.url}</span>
             <button
               onClick={() => copyToClipboard(job.url)}
-              className="shrink-0 rounded-lg p-1 text-muted transition-colors hover:text-white"
+              className="shrink-0 rounded-xl p-1.5 text-slate-500 transition-colors hover:text-slate-900 hover:bg-slate-200"
               title="Copy source URL"
             >
-              {copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
             </button>
           </div>
         )}
-      </Card>
+      </div>
 
       {/* Action buttons */}
       <div className="flex w-full max-w-xl flex-col items-center gap-4">
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
-          <Button className="w-full gap-2 sm:w-auto" onClick={handleOpenFolder}>
-            <FolderOpen className="h-4 w-4" />
-            Open History
-          </Button>
-          <a href={fileUrl} download={job.mediaFilename || undefined} className="w-full sm:w-auto">
-            <Button variant="secondary" className="w-full gap-2">
+          <a href={fileUrl} download={job.mediaFilename || `${job.id}.mp4`} className="w-full sm:w-auto">
+            <button className="btn-3d-orange w-full sm:w-auto px-7 py-3.5 rounded-2xl font-bold text-white inline-flex items-center justify-center gap-2 shadow-md">
               <Download className="h-4 w-4" />
-              Save to Device
-            </Button>
+              Download
+            </button>
           </a>
-          <Button variant="secondary" className="w-full gap-2 sm:w-auto" onClick={handleShare}>
-            {copied ? <Check className="h-4 w-4 text-green-400" /> : <Share2 className="h-4 w-4" />}
+          <button
+            onClick={handleOpenFolder}
+            className="w-full sm:w-auto px-6 py-3.5 rounded-2xl glass-panel border border-slate-200 hover:border-slate-300 text-slate-800 font-bold inline-flex items-center justify-center gap-2 transition-all hover:bg-slate-100 shadow-sm"
+          >
+            <FolderOpen className="h-4 w-4 text-[#FF6B00]" />
+            History
+          </button>
+          <button
+            onClick={handleShare}
+            className="w-full sm:w-auto px-6 py-3.5 rounded-2xl glass-panel border border-slate-200 hover:border-slate-300 text-slate-800 font-bold inline-flex items-center justify-center gap-2 transition-all hover:bg-slate-100 shadow-sm"
+          >
+            {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Share2 className="h-4 w-4" />}
             Share
-          </Button>
+          </button>
         </div>
         <Link
           href="/"
-          className="flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-white"
+          className="flex items-center gap-2 text-sm font-bold text-slate-600 transition-colors hover:text-accent mt-2"
         >
           <Plus className="h-4 w-4" />
-          Download Another
+          Download Another Media
         </Link>
       </div>
     </div>

@@ -56,14 +56,14 @@ function JobMenu({ job, onDeleted }: { job: DownloadJob; onDeleted: (id: string)
       </button>
 
       {open && (
-        <div className="absolute right-0 top-8 z-50 w-44 overflow-hidden rounded-xl border border-border bg-surface shadow-xl">
+        <div className="absolute right-0 top-8 z-50 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
           {/* Open source URL */}
           <a
             href={job.url}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-muted transition-colors hover:bg-surface2 hover:text-white"
+            className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-slate-700 font-medium transition-colors hover:bg-orange-50 hover:text-[#FF6B00]"
           >
             <ExternalLink className="h-3.5 w-3.5" />
             Open Source
@@ -73,7 +73,7 @@ function JobMenu({ job, onDeleted }: { job: DownloadJob; onDeleted: (id: string)
           <a
             href={`/download/options?url=${encodeURIComponent(job.url)}`}
             onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-muted transition-colors hover:bg-surface2 hover:text-white"
+            className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-slate-700 font-medium transition-colors hover:bg-orange-50 hover:text-[#FF6B00]"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             Re-download
@@ -85,19 +85,19 @@ function JobMenu({ job, onDeleted }: { job: DownloadJob; onDeleted: (id: string)
               href={`${API}/api/downloads/${job.id}/file`}
               download={job.mediaFilename || undefined}
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-muted transition-colors hover:bg-surface2 hover:text-white"
+              className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-slate-700 font-medium transition-colors hover:bg-orange-50 hover:text-[#FF6B00]"
             >
               <Download className="h-3.5 w-3.5" />
               Save to Device
             </a>
           )}
 
-          <div className="my-1 h-px bg-border" />
+          <div className="my-1 h-px bg-slate-100" />
 
           {/* Delete */}
           <button
             onClick={handleDelete}
-            className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-xs text-red-400 transition-colors hover:bg-red-500/10"
+            className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-xs text-red-500 font-semibold transition-colors hover:bg-red-50"
           >
             <Trash2 className="h-3.5 w-3.5" />
             Delete
@@ -166,18 +166,18 @@ export function HistoryTable() {
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   return (
-    <Card className="overflow-hidden p-0">
+    <div className="overflow-hidden rounded-3xl bg-white border border-[#FF6B00]/30 shadow-lg">
       {/* Toolbar */}
-      <div className="flex flex-col gap-4 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-1">
+      <div className="flex flex-col gap-4 border-b border-slate-200 p-5 sm:flex-row sm:items-center sm:justify-between bg-orange-50/30">
+        <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-2xl bg-slate-100 border border-slate-200">
           {filterTabs.map((tab) => (
             <button
               key={tab}
               onClick={() => { setActiveFilter(tab); setPage(1); }}
-              className={`rounded-xl px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all duration-200 ${
                 activeFilter === tab
-                  ? 'bg-accent/10 text-accent'
-                  : 'text-muted hover:bg-surface2 hover:text-white'
+                  ? 'btn-3d-orange text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
               }`}
             >
               {tab}
@@ -185,22 +185,22 @@ export function HistoryTable() {
           ))}
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2">
-            <Search className="h-3.5 w-3.5 text-muted" />
+          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 focus-within:border-accent shadow-sm">
+            <Search className="h-3.5 w-3.5 text-slate-400" />
             <input
               type="text"
               placeholder="Search downloads..."
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="w-full bg-transparent text-xs text-white placeholder:text-muted/60 focus:outline-none sm:w-36"
+              className="w-full bg-transparent text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none sm:w-44 font-medium"
             />
           </div>
           <button
             onClick={load}
-            className="rounded-xl border border-border bg-surface p-2 text-muted hover:text-white"
+            className="rounded-2xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-sm"
             title="Refresh"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 text-[#FF6B00] ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
@@ -210,13 +210,13 @@ export function HistoryTable() {
         {loading ? (
           <div className="space-y-3 p-6">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-12 animate-pulse rounded-xl bg-surface2" />
+              <div key={i} className="h-12 animate-pulse rounded-xl bg-slate-100" />
             ))}
           </div>
         ) : paginated.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <p className="text-sm font-medium text-white">No downloads found</p>
-            <p className="text-xs text-muted">
+            <p className="text-base font-bold text-slate-900">No downloads found</p>
+            <p className="text-xs text-slate-500 font-medium">
               {jobs.length === 0
                 ? 'Your download history will appear here after you start a download.'
                 : 'No results match your current filter.'}
@@ -225,7 +225,7 @@ export function HistoryTable() {
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border">
+              <tr className="border-b border-slate-200 bg-slate-50">
                 {[
                   { label: 'FILE', cls: '' },
                   { label: 'SOURCE', cls: 'hidden sm:table-cell' },
@@ -238,22 +238,22 @@ export function HistoryTable() {
                 ].map(({ label, cls }, i) => (
                   <th
                     key={i}
-                    className={`whitespace-nowrap px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-wider text-muted/60 sm:px-4 ${cls}`}
+                    className={`whitespace-nowrap px-2 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:px-4 ${cls}`}
                   >
                     {label}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody className="divide-y divide-slate-100">
               {paginated.map((job) => {
                 const { name: platformName, color: platformColor } = platformFromUrl(job.url);
                 const cfg = statusConfig[job.status] ?? { label: job.status, className: 'bg-muted/10 text-muted' };
                 const date = new Date(job.startedAt).toLocaleDateString('en-GB');
                 return (
-                  <tr key={job.id} className="transition-colors hover:bg-surface2/40">
+                  <tr key={job.id} className="transition-colors hover:bg-orange-50/30">
                     <td className="px-2 py-3 sm:px-4">
-                      <span className="block max-w-[140px] truncate text-xs font-medium text-white sm:max-w-[180px]">
+                      <span className="block max-w-[140px] truncate text-xs font-bold text-slate-900 sm:max-w-[180px]">
                         {job.mediaFilename || job.id}
                       </span>
                     </td>
@@ -262,31 +262,31 @@ export function HistoryTable() {
                         href={job.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block max-w-[140px] truncate text-xs text-muted hover:text-accent"
+                        className="block max-w-[140px] truncate text-xs text-slate-500 font-medium hover:text-[#FF6B00]"
                       >
                         {job.url}
                       </a>
                     </td>
                     <td className="hidden px-4 py-3 sm:table-cell">
-                      <span className={`text-xs font-semibold ${platformColor}`}>{platformName}</span>
+                      <span className={`text-xs font-bold ${platformColor}`}>{platformName}</span>
                     </td>
-                    <td className="hidden px-4 py-3 text-xs text-muted sm:table-cell">{date}</td>
+                    <td className="hidden px-4 py-3 text-xs text-slate-500 font-medium sm:table-cell" suppressHydrationWarning>{date}</td>
                     <td className="px-2 py-3 sm:px-4">
-                      <span className="rounded-md bg-surface2 px-2 py-0.5 text-xs font-medium text-white">
+                      <span className="rounded-md bg-orange-50 border border-orange-200 px-2 py-0.5 text-xs font-bold text-accent">
                         {job.resolution || '—'}
                       </span>
                     </td>
-                    <td className="hidden px-4 py-3 text-xs text-muted sm:table-cell">
+                    <td className="hidden px-4 py-3 text-xs text-slate-600 font-semibold sm:table-cell">
                       {job.fileSize ?? job.totalSize ?? '—'}
                     </td>
                     <td className="px-2 py-3 sm:px-4">
                       {job.status === 'downloading' && job.progress > 0 ? (
                         <div className="flex flex-col gap-1">
                           <div className="flex justify-between text-xs">
-                            <span className="text-accent">{job.progress}%</span>
-                            {job.speed && <span className="text-muted">{job.speed}</span>}
+                            <span className="text-accent font-bold">{job.progress}%</span>
+                            {job.speed && <span className="text-slate-500">{job.speed}</span>}
                           </div>
-                          <div className="h-1.5 w-24 overflow-hidden rounded-full bg-surface2">
+                          <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-200">
                             <div
                               className="h-full rounded-full bg-accent"
                               style={{ width: `${job.progress}%` }}
@@ -294,7 +294,7 @@ export function HistoryTable() {
                           </div>
                         </div>
                       ) : (
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${cfg.className}`}>
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${cfg.className}`}>
                           {cfg.label}
                         </span>
                       )}
@@ -312,41 +312,41 @@ export function HistoryTable() {
 
       {/* Pagination */}
       {!loading && filtered.length > 0 && (
-        <div className="flex flex-col gap-3 border-t border-border px-5 py-4 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-t border-slate-200 px-5 py-4 text-xs text-slate-600 font-medium sm:flex-row sm:items-center sm:justify-between bg-slate-50/50">
           <span>{filtered.length} download{filtered.length !== 1 ? 's' : ''}</span>
           <div className="flex items-center gap-1">
             <button
               onClick={() => setPage(1)}
               disabled={page === 1}
-              className="rounded-lg p-1.5 hover:bg-surface2 hover:text-white disabled:opacity-30"
+              className="rounded-lg p-1.5 hover:bg-slate-200 hover:text-slate-900 disabled:opacity-30"
             >
               <ChevronFirst className="h-3.5 w-3.5" />
             </button>
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="rounded-lg p-1.5 hover:bg-surface2 hover:text-white disabled:opacity-30"
+              className="rounded-lg p-1.5 hover:bg-slate-200 hover:text-slate-900 disabled:opacity-30"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </button>
-            <span className="px-2">{page} / {totalPages}</span>
+            <span className="px-2 font-bold text-slate-800">{page} / {totalPages}</span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="rounded-lg p-1.5 hover:bg-surface2 hover:text-white disabled:opacity-30"
+              className="rounded-lg p-1.5 hover:bg-slate-200 hover:text-slate-900 disabled:opacity-30"
             >
               <ChevronRight className="h-3.5 w-3.5" />
             </button>
             <button
               onClick={() => setPage(totalPages)}
               disabled={page === totalPages}
-              className="rounded-lg p-1.5 hover:bg-surface2 hover:text-white disabled:opacity-30"
+              className="rounded-lg p-1.5 hover:bg-slate-200 hover:text-slate-900 disabled:opacity-30"
             >
               <ChevronLast className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
       )}
-    </Card>
+    </div>
   );
 }

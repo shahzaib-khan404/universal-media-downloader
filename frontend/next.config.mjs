@@ -4,14 +4,7 @@ const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
 
-  // Allow Next.js dev server to accept requests coming through the ngrok tunnel
-  allowedDevOrigins: [
-    'ungloved-graves-ladies.ngrok-free.dev',
-    '*.ngrok-free.app',
-    '*.ngrok.io',
-  ],
-
-  // Proxy /api/* to the Fastify backend — lets a single ngrok URL serve both frontend and API
+  // Proxy /api/* to the Fastify backend
   async rewrites() {
     return [
       {

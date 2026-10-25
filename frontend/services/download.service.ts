@@ -46,6 +46,15 @@ interface MetadataResponse {
   uploadedAt: string | null;
   thumbnail: string | null;
   duration: number;
+  isPlaylist?: boolean;
+  entries?: Array<{
+    id: string;
+    index: number;
+    title: string;
+    duration: number;
+    url?: string;
+    channel?: string;
+  }>;
   quality: QualityOption[];
   audio: AudioOption[];
 }
@@ -109,6 +118,8 @@ export async function fetchAllMediaData(sourceUrl: string): Promise<{
     channel: data.channel,
     subscribers: null,
     description: null,
+    isPlaylist: data.isPlaylist,
+    entries: data.entries,
   };
   return { media, qualities: data.quality, audioOptions: data.audio };
 }
@@ -151,6 +162,34 @@ export async function getCompletedJob(jobId: string): Promise<DownloadJob> {
 export async function listDownloadJobs(): Promise<DownloadJob[]> {
   const rows = await apiGet<Record<string, unknown>[]>('/downloads');
   return rows.map(mapJob);
+}
+
+export function subscribeJobUpdates(
+  jobId: string,
+  onUpdate: (job: DownloadJob) => void,
+  onError?: (err: Error) => void
+): () => void {
+  // Try connecting via EventSource for instant zero-latency telemetry
+  const streamUrl = `/api/downloads/${jobId}/events`;
+  try {
+    const es = new EventSource(streamUrl);
+    es.onmessage = (event) => {
+      try {
+        const raw = JSON.parse(event.data);
+        if (raw) {
+          onUpdate(mapJob(raw));
+        }
+      } catch { /* ignore parse error */ }
+    };
+    es.onerror = () => {
+      es.close();
+      if (onError) onError(new Error('SSE disconnected'));
+    };
+    return () => es.close();
+  } catch (e) {
+    if (onError) onError(e instanceof Error ? e : new Error('SSE unsupported'));
+    return () => {};
+  }
 }
 
 // Legacy helpers

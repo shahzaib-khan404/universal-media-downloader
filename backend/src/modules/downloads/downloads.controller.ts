@@ -1,16 +1,40 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import * as path from 'path';
 import { downloadsService } from './downloads.service';
 import { prisma } from '../../lib/prisma';
 import { subscribeToJob } from '../../lib/event-bus';
 import { getStorage } from '../../lib/storage';
+import { isAllowedUrl } from '../../lib/security';
 
 export const downloadsController = {
   fetchMetadata: async (request: FastifyRequest, reply: FastifyReply) => {
     const { url } = request.body as { url?: string };
     if (!url) return reply.status(400).send({ message: 'url is required' });
+    if (!isAllowedUrl(url)) {
+      return reply.status(400).send({ message: 'Invalid or forbidden URL. Only public HTTP/HTTPS URLs are allowed.' });
+    }
     try {
       const info = await downloadsService.fetchMetadata(url);
-      const { quality, audio } = downloadsService.buildQualityOptions(info);
+      const isPlaylist = Boolean(info.is_playlist || (info.entries && info.entries.length > 0));
+
+      // Preset quality & audio options for playlist/album downloads
+      const defaultPlaylistQuality = [
+        { id: '1080p', label: '1080p Full HD', resolution: '1920×1080', codec: 'H.264', container: 'mp4', features: ['Full HD'], recommended: true },
+        { id: '720p', label: '720p HD', resolution: '1280×720', codec: 'H.264', container: 'mp4', features: ['HD'], recommended: false },
+        { id: '480p', label: '480p SD', resolution: '854×480', codec: 'H.264', container: 'mp4', features: ['SD'], recommended: false },
+      ];
+
+      const defaultPlaylistAudio = [
+        { id: 'mp3_320', format: 'MP3', label: '320 kbps (High Quality)', bitrate: '320 kbps' },
+        { id: 'mp3_192', format: 'MP3', label: '192 kbps (Standard)', bitrate: '192 kbps' },
+        { id: 'm4a', format: 'M4A', label: 'AAC Audio', bitrate: '256 kbps' },
+        { id: 'flac', format: 'FLAC', label: 'Lossless Audio', bitrate: 'Lossless' },
+      ];
+
+      const { quality, audio } = isPlaylist
+        ? { quality: defaultPlaylistQuality, audio: defaultPlaylistAudio }
+        : downloadsService.buildQualityOptions(info);
+
       return reply.send({
         id: info.extractor ?? 'unknown',
         title: info.title ?? 'Untitled',
@@ -20,6 +44,15 @@ export const downloadsController = {
         uploadedAt: info.upload_date ?? null,
         thumbnail: info.thumbnail ?? null,
         duration: info.duration ?? 0,
+        isPlaylist,
+        entries: info.entries?.map((e, index) => ({
+          id: e.id,
+          index: index + 1,
+          title: e.title,
+          duration: e.duration ?? 0,
+          url: e.url,
+          channel: e.channel,
+        })) ?? [],
         quality,
         audio,
       });
@@ -36,6 +69,9 @@ export const downloadsController = {
       audioOnly?: boolean;
     };
     if (!payload.url) return reply.status(400).send({ message: 'url is required' });
+    if (!isAllowedUrl(payload.url)) {
+      return reply.status(400).send({ message: 'Invalid or forbidden URL. Only public HTTP/HTTPS URLs are allowed.' });
+    }
     if (!payload.qualityId) return reply.status(400).send({ message: 'qualityId is required' });
 
     // Optionally extract the authenticated user so the job is attributed to them
@@ -68,6 +104,7 @@ export const downloadsController = {
   },
 
   listJobs: async (request: FastifyRequest, reply: FastifyReply) => {
+    try { await request.jwtVerify(); } catch { /* anonymous */ }
     const user = request.user as { id: string } | undefined;
     const jobs = await downloadsService.listJobs(user?.id);
     return reply.send(jobs);
@@ -117,13 +154,38 @@ export const downloadsController = {
     if (!result) return reply.status(404).send({ message: 'File not found' });
 
     const storage = getStorage();
+
+    // Defense-in-depth: path traversal prevention for local storage
+    if (storage.name === 'local') {
+      const downloadDir = path.resolve(process.env.DOWNLOAD_DIR ?? path.join(process.cwd(), 'downloads'));
+      const targetPath = path.resolve(downloadDir, result.storagePath);
+      if (!targetPath.startsWith(downloadDir)) {
+        return reply.status(403).send({ message: 'Access denied: Path traversal detected' });
+      }
+    }
+
     const sizeBytes = await storage.sizeBytes(result.storagePath);
     if (sizeBytes === null && storage.name === 'local') {
       return reply.status(410).send({ message: 'File has expired or been removed' });
     }
 
-    reply.header('Content-Disposition', `attachment; filename="${result.fileName}"`);
-    reply.header('Content-Type', 'application/octet-stream');
+    // Sanitize output filename to prevent HTTP response splitting / header injection
+    const cleanFileName = path.basename(result.fileName).replace(/["\r\n]/g, '');
+
+    const ext = path.extname(cleanFileName).toLowerCase();
+    const contentTypeMap: Record<string, string> = {
+      '.mp4': 'video/mp4',
+      '.mkv': 'video/x-matroska',
+      '.webm': 'video/webm',
+      '.mp3': 'audio/mpeg',
+      '.m4a': 'audio/mp4',
+      '.flac': 'audio/flac',
+      '.zip': 'application/zip',
+    };
+    const contentType = contentTypeMap[ext] || 'application/octet-stream';
+
+    reply.header('Content-Disposition', `attachment; filename="${cleanFileName}"`);
+    reply.header('Content-Type', contentType);
     if (sizeBytes !== null) reply.header('Content-Length', sizeBytes);
     return reply.send(storage.createReadStream(result.storagePath));
   },

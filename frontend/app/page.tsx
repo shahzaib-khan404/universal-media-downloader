@@ -6,9 +6,27 @@ import { Footer } from '@/components/navigation/footer';
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen">
+    <div className="relative min-h-screen overflow-hidden">
+      {/* 3D Global Ambient Video Background */}
+      <div 
+        aria-hidden="true" 
+        className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+      >
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="h-full w-full object-cover"
+        >
+          <source src="/videos/Firstpage.mp4" type="video/mp4" />
+        </video>
+        {/* Subtle warm wash overlay to preserve light mode text legibility */}
+        <div className="absolute inset-0 bg-[#F8FAFC]/20 backdrop-blur-[1px]" />
+      </div>
+
       <Navbar />
-      <main className="container mx-auto py-12 space-y-20">
+      <main className="container mx-auto py-12 space-y-20 relative z-10">
         <HeroSection />
         <FeatureGrid />
         <CallToAction />

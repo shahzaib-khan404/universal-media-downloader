@@ -2,7 +2,17 @@ import { spawn } from 'child_process';
 import { prisma } from '../../lib/prisma';
 import { downloadQueue } from '../queue/queue.service';
 
-interface YtDlpInfo {
+export interface PlaylistEntry {
+  id: string;
+  title: string;
+  duration?: number;
+  url?: string;
+  channel?: string;
+  thumbnail?: string;
+}
+
+export interface YtDlpInfo {
+  _type?: string;
   title?: string;
   channel?: string;
   uploader?: string;
@@ -12,6 +22,8 @@ interface YtDlpInfo {
   thumbnail?: string;
   webpage_url?: string;
   extractor?: string;
+  is_playlist?: boolean;
+  entries?: PlaylistEntry[];
   formats?: Array<{
     format_id: string;
     ext: string;
@@ -28,11 +40,18 @@ interface YtDlpInfo {
   }>;
 }
 
+import { resolveYtDlpBinary } from '../../lib/binary';
+
+function isPlaylistUrl(url: string): boolean {
+  return /[?&]list=|(?:playlist|album|sets)\//i.test(url);
+}
+
 function runYtDlp(args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     let stdout = '';
     let stderr = '';
-    const proc = spawn('yt-dlp', args, { env: { ...process.env, PYTHONUNBUFFERED: '1' } });
+    const binary = resolveYtDlpBinary();
+    const proc = spawn(binary, args, { env: { ...process.env, PYTHONUNBUFFERED: '1' } });
     proc.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
     proc.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
     proc.on('close', (code) => {
@@ -45,7 +64,15 @@ function runYtDlp(args: string[]): Promise<string> {
 
 export const downloadsService = {
   async fetchMetadata(url: string): Promise<YtDlpInfo> {
-    const json = await runYtDlp(['--dump-json', '--no-playlist', '--js-runtimes', 'node', url]);
+    const isPlaylist = isPlaylistUrl(url);
+    if (isPlaylist) {
+      const json = await runYtDlp(['--flat-playlist', '--dump-single-json', '--js-runtimes', 'node', '--', url]);
+      const data = JSON.parse(json) as YtDlpInfo;
+      data.is_playlist = true;
+      return data;
+    }
+
+    const json = await runYtDlp(['--dump-json', '--no-playlist', '--js-runtimes', 'node', '--', url]);
     return JSON.parse(json) as YtDlpInfo;
   },
 
@@ -123,10 +150,13 @@ export const downloadsService = {
       },
     });
 
-    await downloadQueue.add('download', { jobId: job.id, ...data }, {
-      removeOnComplete: { count: 100 },
-      removeOnFail: false,
-    });
+    // Only add to BullMQ Redis queue if NOT using the direct worker
+    if (process.env.DIRECT_WORKER === 'false') {
+      await downloadQueue.add('download', { jobId: job.id, ...data }, {
+        removeOnComplete: { count: 100 },
+        removeOnFail: false,
+      });
+    }
 
     return job;
   },

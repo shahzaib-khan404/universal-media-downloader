@@ -9,6 +9,15 @@ export type Platform =
   | 'DirectLink'
   | string; // allow arbitrary platform strings from backend
 
+export interface PlaylistTrack {
+  id: string;
+  index: number;
+  title: string;
+  duration: number;
+  url?: string;
+  channel?: string;
+}
+
 export interface MediaInfo {
   id: string;
   url: string;
@@ -21,6 +30,8 @@ export interface MediaInfo {
   channel: string;
   subscribers: string | null;
   description: string | null;
+  isPlaylist?: boolean;
+  entries?: PlaylistTrack[];
 }
 
 export interface QualityOption {
