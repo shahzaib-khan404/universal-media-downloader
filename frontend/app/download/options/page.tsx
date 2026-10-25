@@ -50,8 +50,9 @@ function OptionsContent() {
       const { jobId } = await createDownloadJob(sourceUrl, qualityId, type === 'audio');
       const thumb = media?.thumbnail ? `&thumb=${encodeURIComponent(media.thumbnail)}` : '';
       router.push(`/download/progress/${jobId}?url=${encodeURIComponent(sourceUrl)}${thumb}`);
-    } catch {
-      toast.error('Failed to start download. Please try again.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Download Error: ${msg}`);
       setSubmitting(false);
     }
   };

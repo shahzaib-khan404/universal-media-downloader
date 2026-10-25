@@ -52,7 +52,14 @@ async function proxyToBackend(req: NextRequest, path: string[]) {
 
   // Forward files / binary streams with original Content-Disposition filename
   const contentDisposition = upstream.headers.get('content-disposition');
-  if (contentDisposition || !contentTypeHeader.includes('application/json')) {
+  const isBinary =
+    contentDisposition ||
+    contentTypeHeader.includes('video/') ||
+    contentTypeHeader.includes('audio/') ||
+    contentTypeHeader.includes('application/octet-stream') ||
+    contentTypeHeader.includes('application/zip');
+
+  if (isBinary) {
     const responseHeaders = new Headers();
     if (contentDisposition) responseHeaders.set('Content-Disposition', contentDisposition);
     if (contentTypeHeader) responseHeaders.set('Content-Type', contentTypeHeader);
