@@ -10,7 +10,6 @@ import type { MediaInfo, QualityOption, AudioOption } from '@/types/download';
 import { Settings2, Eye, Calendar, Info, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { LoadingScreen } from '@/components/ui/loading-screen';
-import { Turnstile } from '@/components/ui/turnstile';
 
 function OptionsContent() {
   const params = useSearchParams();
@@ -78,20 +77,18 @@ function OptionsContent() {
 
         {fetchError ? (
           <div className="rounded-3xl border border-red-500/30 bg-red-50/90 p-8 text-center max-w-2xl mx-auto shadow-md">
-            <p className="text-xl font-bold text-red-600">Verification Required</p>
+            <p className="text-xl font-bold text-red-600">Could Not Fetch Media</p>
             <p className="mt-2 text-sm text-slate-700 font-medium">
               {fetchError.includes('429') || fetchError.includes('bot')
-                ? 'YouTube rate limited this server IP. Please verify below or click Retry.'
+                ? 'YouTube rate limited this request. Please wait a moment and click Retry.'
                 : fetchError.includes('Sign in')
                 ? 'This video requires account access or public verification.'
                 : fetchError}
             </p>
 
-            {/* Cloudflare Turnstile Verification Widget */}
-            <div className="my-6 flex justify-center">
-              <Turnstile
-                onVerify={() => {
-                  toast.success('Human verified! Re-requesting video info...');
+            <div className="mt-6 flex justify-center gap-3">
+              <button
+                onClick={() => {
                   setLoading(true);
                   setFetchError(null);
                   fetchAllMediaData(sourceUrl)
@@ -106,13 +103,7 @@ function OptionsContent() {
                     })
                     .finally(() => setLoading(false));
                 }}
-              />
-            </div>
-
-            <div className="flex justify-center gap-3">
-              <button
-                onClick={() => window.location.reload()}
-                className="btn-3d-orange rounded-xl px-5 py-2.5 text-xs font-bold text-white shadow-sm"
+                className="btn-3d-orange rounded-xl px-6 py-2.5 text-xs font-bold text-white shadow-sm"
               >
                 Retry Request
               </button>
