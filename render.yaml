@@ -22,3 +22,20 @@ services:
         generateValue: true
       - key: CORS_ORIGINS
         value: "*"
+
+  - type: web
+    name: umd-frontend
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BACKEND_URL
+        fromService:
+          type: web
+          name: umd-backend
+          property: host
