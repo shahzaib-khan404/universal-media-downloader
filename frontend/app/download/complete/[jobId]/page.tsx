@@ -7,6 +7,7 @@ import { Footer } from '@/components/navigation/footer';
 import { CompleteCard } from '@/features/download/components/complete-card';
 import { getCompletedJob } from '@/services/download.service';
 import type { DownloadJob } from '@/types/download';
+import { LoadingScreen } from '@/components/ui/loading-screen';
 
 function CompleteContent() {
   const { jobId } = useParams<{ jobId: string }>();
@@ -44,17 +45,11 @@ function CompleteContent() {
 
         <div className="mx-auto max-w-3xl">
           {loading ? (
-            <div className="animate-pulse rounded-3xl border border-orange-200/70 bg-gradient-to-b from-[#FFF5ED] via-[#FFEADB] to-[#FEDBC0] p-10 shadow-sm">
-              <div className="flex flex-col items-center gap-8">
-                <div className="h-20 w-20 rounded-full bg-orange-200/60" />
-                <div className="h-6 w-64 rounded bg-orange-200/60" />
-                <div className="h-32 w-full rounded-2xl bg-orange-200/60" />
-                <div className="flex gap-3">
-                  <div className="h-10 w-32 rounded-xl bg-orange-200/60" />
-                  <div className="h-10 w-36 rounded-xl bg-orange-200/60" />
-                  <div className="h-10 w-24 rounded-xl bg-orange-200/60" />
-                </div>
-              </div>
+            <div className="rounded-3xl border border-orange-200/70 bg-gradient-to-b from-[#FFF5ED] via-[#FFEADB] to-[#FEDBC0] p-10 shadow-sm">
+              <LoadingScreen
+                title="Finalizing Download Assets..."
+                subtitle="Verifying media file integrity, container metadata, and packaging direct download stream."
+              />
             </div>
           ) : error ? (
             <div className="rounded-3xl border border-red-500/30 bg-red-50/80 p-10 text-center shadow-md">
@@ -79,11 +74,14 @@ function CompleteContent() {
 
 export default function DownloadCompletePage() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col justify-between">
       <Navbar />
       <Suspense fallback={
-        <main className="container mx-auto px-4 py-12">
-          <div className="h-64 animate-pulse rounded-3xl glass-panel" />
+        <main className="container mx-auto px-4 py-12 flex-1 flex items-center justify-center">
+          <LoadingScreen 
+            title="Loading Download Card..."
+            subtitle="Preparing file download stream and media playback details."
+          />
         </main>
       }>
         <CompleteContent />

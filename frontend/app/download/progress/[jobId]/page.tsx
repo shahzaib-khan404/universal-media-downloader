@@ -9,6 +9,7 @@ import { getDownloadJob, subscribeJobUpdates } from '@/services/download.service
 import type { DownloadJob } from '@/types/download';
 import { Pause, Square, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { LoadingScreen } from '@/components/ui/loading-screen';
 
 const STEPS = [
   { key: 'queued', label: 'Queued' },
@@ -291,10 +292,13 @@ function ProgressContent() {
 export default function DownloadProgressPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen">
+      <div className="min-h-screen flex flex-col justify-between">
         <Navbar />
-        <main className="container mx-auto px-4 py-12">
-          <div className="h-64 animate-pulse rounded-3xl glass-panel" />
+        <main className="container mx-auto px-4 py-12 flex-1 flex items-center justify-center">
+          <LoadingScreen 
+            title="Initializing Live Download..."
+            subtitle="Allocating worker thread, establishing SSE telemetry socket, and mounting destination stream."
+          />
         </main>
         <Footer />
       </div>

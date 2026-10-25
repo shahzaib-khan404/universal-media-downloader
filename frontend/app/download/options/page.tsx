@@ -9,6 +9,7 @@ import { fetchAllMediaData, createDownloadJob } from '@/services/download.servic
 import type { MediaInfo, QualityOption, AudioOption } from '@/types/download';
 import { Settings2, Eye, Calendar, Info, Shield } from 'lucide-react';
 import { toast } from 'sonner';
+import { LoadingScreen } from '@/components/ui/loading-screen';
 
 function OptionsContent() {
   const params = useSearchParams();
@@ -92,21 +93,11 @@ function OptionsContent() {
             </button>
           </div>
         ) : loading ? (
-          <div className="space-y-6">
-            {/* Media skeleton */}
-            <div className="animate-pulse rounded-3xl border border-orange-200/60 bg-gradient-to-b from-[#FFF5ED] to-[#FFEADB] p-6 shadow-sm">
-              <div className="flex gap-4">
-                <div className="h-24 w-36 rounded-xl bg-orange-200/50" />
-                <div className="flex-1 space-y-3">
-                  <div className="h-4 w-3/4 rounded bg-orange-200/50" />
-                  <div className="h-3 w-1/2 rounded bg-orange-200/50" />
-                  <div className="h-3 w-1/3 rounded bg-orange-200/50" />
-                </div>
-              </div>
-            </div>
-            <div className="animate-pulse rounded-3xl border border-orange-200/60 bg-gradient-to-b from-[#FFF5ED] to-[#FFEADB] p-6 shadow-sm">
-              <div className="h-64 rounded-xl bg-orange-200/50" />
-            </div>
+          <div className="rounded-3xl border border-orange-200/70 bg-gradient-to-b from-[#FFF5ED] via-[#FFEADB] to-[#FEDBC0] p-8 shadow-sm">
+            <LoadingScreen 
+              title="Analyzing Media & Formats..."
+              subtitle="Fetching high-definition streams, bitrates, audio codecs, and video resolutions from source."
+            />
           </div>
         ) : (
           <div className="space-y-6">
@@ -219,10 +210,13 @@ function OptionsContent() {
 export default function DownloadOptionsPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen">
+      <div className="min-h-screen flex flex-col justify-between">
         <Navbar />
-        <main className="container mx-auto px-4 py-12">
-          <div className="h-64 animate-pulse rounded-3xl glass-panel" />
+        <main className="container mx-auto px-4 py-12 flex-1 flex items-center justify-center">
+          <LoadingScreen 
+            title="Loading Options Screen..."
+            subtitle="Fetching media metadata, resolution profiles, and audio containers."
+          />
         </main>
         <Footer />
       </div>
