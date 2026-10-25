@@ -95,6 +95,7 @@ function mapJob(raw: Record<string, unknown>): DownloadJob {
     fileSize: result?.fileSizeBytes
       ? `${((result.fileSizeBytes as number) / 1024 / 1024).toFixed(1)} MB`
       : null,
+    error: raw.error as string ?? null,
   };
 }
 

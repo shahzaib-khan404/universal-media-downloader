@@ -158,24 +158,21 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
       '--add-metadata'
     );
   } else {
-    const parts = qualityId.split(':');
-    const height = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
-    const h = !isNaN(height) && height > 0 ? height : 1080;
-    const isCombined = parts.length >= 3 && parts[2] === '1';
-
-    if (isCombined) {
-      args.push(
-        '-f', `best[height<=${h}]/best`,
-        '--format-sort', 'height,br',
-        '--merge-output-format', 'mp4'
-      );
+    let h = 1080;
+    if (qualityId.includes(':')) {
+      const parts = qualityId.split(':');
+      const parsedH = parts.length >= 2 ? parseInt(parts[1], 10) : NaN;
+      if (!isNaN(parsedH) && parsedH > 0) h = parsedH;
     } else {
-      args.push(
-        '-f', `bestvideo[height<=${h}]+bestaudio/best[height<=${h}]/best`,
-        '--format-sort', 'height,br',
-        '--merge-output-format', 'mp4'
-      );
+      const parsedH = parseInt(qualityId.replace(/[^0-9]/g, ''), 10);
+      if (!isNaN(parsedH) && parsedH > 0) h = parsedH;
     }
+
+    args.push(
+      '-f', `bestvideo[height<=${h}]+bestaudio/best[height<=${h}]/best`,
+      '--format-sort', 'height,br',
+      '--merge-output-format', 'mp4'
+    );
   }
 
   const ffmpegLocation = resolveFfmpegBinary();
@@ -209,8 +206,20 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
       }
     });
 
-    proc.stderr.on('data', (d: Buffer) => process.stderr.write(`[direct-worker] ${d}`));
-    proc.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`yt-dlp exit ${code}`))));
+    const stderrLines: string[] = [];
+    proc.stderr.on('data', (d: Buffer) => {
+      const text = d.toString();
+      stderrLines.push(text);
+      process.stderr.write(`[direct-worker] ${text}`);
+    });
+    proc.on('close', (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        const errorDetail = stderrLines.join('').trim().split('\n').filter(Boolean).slice(-3).join(' ') || `Exit code ${code}`;
+        reject(new Error(errorDetail));
+      }
+    });
     proc.on('error', reject);
   });
 

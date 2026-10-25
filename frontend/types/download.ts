@@ -84,6 +84,7 @@ export interface DownloadJob {
   startedAt: string;
   completedAt: string | null;
   fileSize: string | null;
+  error?: string | null;
 }
 
 export type HistoryStatus = 'COMPLETED' | 'DOWNLOADING' | 'FAILED' | 'CANCELLED';
