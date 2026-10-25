@@ -65,10 +65,13 @@ function runYtDlp(args: string[]): Promise<string> {
 export const downloadsService = {
   async fetchMetadata(url: string): Promise<YtDlpInfo> {
     const isPlaylist = isPlaylistUrl(url);
+    // Industry standard client rotation (Smart TV & Android InnerTube)
+    // TVHTML5_SIMPLY_EMBEDDED_PLAYER and Android VR are immune to YouTube's "Sign in to confirm you're not a bot" challenge
     const antiBlockFlags = [
-      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-      '--extractor-args', 'youtube:player_client=android,web;player_skip=configs',
+      '--user-agent', 'Mozilla/5.0 (SmartHub; SMART-TV; U; Linux/SmartTV) AppleWebKit/538.1+ (KHTML, like Gecko) TV Safari/538.1+',
+      '--extractor-args', 'youtube:player_client=tv_embedded,android,web_safari;player_skip=configs,webpage',
       '--no-check-certificates',
+      '--geo-bypass',
     ];
 
     try {

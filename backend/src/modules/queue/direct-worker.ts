@@ -121,9 +121,10 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
   const args: string[] = [
     '--newline',
     '--js-runtimes', 'node',
-    '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-    '--extractor-args', 'youtube:player_client=android,web;player_skip=configs',
+    '--user-agent', 'Mozilla/5.0 (SmartHub; SMART-TV; U; Linux/SmartTV) AppleWebKit/538.1+ (KHTML, like Gecko) TV Safari/538.1+',
+    '--extractor-args', 'youtube:player_client=tv_embedded,android,web_safari;player_skip=configs,webpage',
     '--no-check-certificates',
+    '--geo-bypass',
   ];
 
   let outputTemplate: string;
