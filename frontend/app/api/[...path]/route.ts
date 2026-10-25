@@ -19,9 +19,24 @@ async function proxyToBackend(req: NextRequest, path: string[]) {
     const text = await req.text();
     if (text) init.body = text;
   }
-
-  const upstream = await fetch(backendUrl, init);
-
+  let upstream: Response;
+  try {
+    // 60-second timeout to allow Render free tier instances to spin up from sleep
+    upstream = await fetch(backendUrl, {
+      ...init,
+      signal: AbortSignal.timeout(60000),
+    });
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.warn(`[Proxy Error] Connecting to ${backendUrl} failed: ${errorMsg}`);
+    return NextResponse.json(
+      {
+        message:
+          'Backend server is waking up (Render cold-start). Please wait 15 seconds and click Retry.',
+      },
+      { status: 503 }
+    );
+  }
   // Stream SSE responses without buffering
   const contentTypeHeader = upstream.headers.get('content-type') || '';
   if (contentTypeHeader.includes('text/event-stream')) {
