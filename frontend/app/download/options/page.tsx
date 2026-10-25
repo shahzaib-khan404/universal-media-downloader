@@ -10,6 +10,7 @@ import type { MediaInfo, QualityOption, AudioOption } from '@/types/download';
 import { Settings2, Eye, Calendar, Info, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { LoadingScreen } from '@/components/ui/loading-screen';
+import { Turnstile } from '@/components/ui/turnstile';
 
 function OptionsContent() {
   const params = useSearchParams();
@@ -76,21 +77,52 @@ function OptionsContent() {
         </div>
 
         {fetchError ? (
-          <div className="rounded-3xl border border-red-500/30 bg-red-500/10 p-8 text-center">
-            <p className="text-lg font-semibold text-red-600">Could not fetch video info</p>
-            <p className="mt-2 text-sm text-slate-600">
+          <div className="rounded-3xl border border-red-500/30 bg-red-50/90 p-8 text-center max-w-2xl mx-auto shadow-md">
+            <p className="text-xl font-bold text-red-600">Verification Required</p>
+            <p className="mt-2 text-sm text-slate-700 font-medium">
               {fetchError.includes('429') || fetchError.includes('bot')
-                ? 'YouTube is blocking requests from this server. Try a different video or wait a few minutes.'
+                ? 'YouTube rate limited this request. Please complete the quick Cloudflare verification below to verify human origin and retry.'
                 : fetchError.includes('Sign in')
-                ? 'This video requires sign-in to access. Try a public video.'
-                : 'Something went wrong fetching the video. Make sure the URL is correct and the video is public.'}
+                ? 'This video requires account access or public verification.'
+                : 'Connection interrupted. Verify below to reconnect with clean edge pipeline.'}
             </p>
-            <button
-              onClick={() => window.history.back()}
-              className="mt-6 rounded-full border border-slate-300 px-5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-[#FF6B00] hover:text-[#FF6B00]"
-            >
-              ← Go back
-            </button>
+
+            {/* Cloudflare Turnstile Verification Widget */}
+            <div className="my-6 flex justify-center">
+              <Turnstile
+                onVerify={() => {
+                  toast.success('Human verified! Re-requesting video info...');
+                  setLoading(true);
+                  setFetchError(null);
+                  fetchAllMediaData(sourceUrl)
+                    .then(({ media, qualities, audioOptions }) => {
+                      setMedia(media);
+                      setQualities(qualities);
+                      setAudioOptions(audioOptions);
+                    })
+                    .catch((err: unknown) => {
+                      const msg = err instanceof Error ? err.message : String(err);
+                      setFetchError(msg);
+                    })
+                    .finally(() => setLoading(false));
+                }}
+              />
+            </div>
+
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => window.location.reload()}
+                className="btn-3d-orange rounded-xl px-5 py-2.5 text-xs font-bold text-white shadow-sm"
+              >
+                Retry Request
+              </button>
+              <button
+                onClick={() => window.history.back()}
+                className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-xs font-bold text-slate-700 transition-colors hover:border-[#FF6B00] hover:text-[#FF6B00]"
+              >
+                ← Go back
+              </button>
+            </div>
           </div>
         ) : loading ? (
           <div className="rounded-3xl border border-orange-200/70 bg-gradient-to-b from-[#FFF5ED] via-[#FFEADB] to-[#FEDBC0] p-8 shadow-sm">
