@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { spawn } from 'child_process';
 import { prisma } from '../../lib/prisma';
 import { downloadQueue } from '../queue/queue.service';
@@ -68,11 +70,25 @@ export const downloadsService = {
     // Industry standard client rotation (Smart TV & Android InnerTube)
     // TVHTML5_SIMPLY_EMBEDDED_PLAYER and Android VR are immune to YouTube's "Sign in to confirm you're not a bot" challenge
     const antiBlockFlags = [
-      '--user-agent', 'Mozilla/5.0 (SmartHub; SMART-TV; U; Linux/SmartTV) AppleWebKit/538.1+ (KHTML, like Gecko) TV Safari/538.1+',
-      '--extractor-args', 'youtube:player_client=tv_embedded,android,web_safari;player_skip=configs,webpage',
+      '--extractor-args', 'youtube:player_client=android,ios,mweb,web_embedded',
       '--no-check-certificates',
       '--geo-bypass',
     ];
+
+    const downloadDir = process.env.DOWNLOAD_DIR || '/downloads';
+    const writableCookiesPath = path.join(downloadDir, 'cookies.txt');
+    const renderSecretCookies = '/etc/secrets/cookies.txt';
+    if (fs.existsSync(renderSecretCookies)) {
+      try {
+        if (!fs.existsSync(downloadDir)) fs.mkdirSync(downloadDir, { recursive: true });
+        fs.copyFileSync(renderSecretCookies, writableCookiesPath);
+        antiBlockFlags.push('--cookies', writableCookiesPath);
+      } catch {
+        antiBlockFlags.push('--cookies', renderSecretCookies);
+      }
+    } else if (fs.existsSync(writableCookiesPath)) {
+      antiBlockFlags.push('--cookies', writableCookiesPath);
+    }
 
     try {
       if (isPlaylist) {

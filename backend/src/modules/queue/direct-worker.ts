@@ -127,20 +127,33 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
   ];
 
   // Auto-detect cookies if provided via Render Secret Files or Environment Variable
+  // Note: Render mounts /etc/secrets as read-only. yt-dlp tries to write/update session cookies,
+  // causing "Errno 30 Read-only file system". We copy to writable DOWNLOAD_DIR first!
+  const writableCookiesPath = path.join(DOWNLOAD_DIR, 'cookies.txt');
   const renderSecretCookies = '/etc/secrets/cookies.txt';
   const customCookiesPath = process.env.COOKIES_PATH;
+
   if (fs.existsSync(renderSecretCookies)) {
-    args.push('--cookies', renderSecretCookies);
+    try {
+      fs.copyFileSync(renderSecretCookies, writableCookiesPath);
+      args.push('--cookies', writableCookiesPath);
+    } catch {
+      args.push('--cookies', renderSecretCookies);
+    }
   } else if (customCookiesPath && fs.existsSync(customCookiesPath)) {
-    args.push('--cookies', customCookiesPath);
+    try {
+      fs.copyFileSync(customCookiesPath, writableCookiesPath);
+      args.push('--cookies', writableCookiesPath);
+    } catch {
+      args.push('--cookies', customCookiesPath);
+    }
   } else if (process.env.COOKIES_B64) {
     try {
-      const decodedPath = path.join(DOWNLOAD_DIR, 'cookies.txt');
-      if (!fs.existsSync(decodedPath)) {
-        fs.writeFileSync(decodedPath, Buffer.from(process.env.COOKIES_B64, 'base64').toString('utf-8'));
-      }
-      args.push('--cookies', decodedPath);
+      fs.writeFileSync(writableCookiesPath, Buffer.from(process.env.COOKIES_B64, 'base64').toString('utf-8'));
+      args.push('--cookies', writableCookiesPath);
     } catch { /* ignore */ }
+  } else if (fs.existsSync(writableCookiesPath)) {
+    args.push('--cookies', writableCookiesPath);
   }
 
   let outputTemplate: string;
