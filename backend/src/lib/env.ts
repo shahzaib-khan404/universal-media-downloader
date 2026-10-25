@@ -9,6 +9,8 @@ const schema = z.object({
   DOWNLOAD_DIR: z.string().min(1).default('/tmp/downloads'),
   STORAGE_PROVIDER: z.enum(['local', 's3', 'r2', 'b2']).default('local'),
   ALLOWED_ORIGINS: z.string().optional(),
+  PROXY_URL: z.string().optional(),
+  YOUTUBE_PROXY: z.string().optional(),
   // S3/R2/B2 (optional — only required when STORAGE_PROVIDER !== 'local')
   S3_ENDPOINT: z.string().optional(),
   S3_BUCKET: z.string().optional(),

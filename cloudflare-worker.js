@@ -6,7 +6,7 @@
  */
 
 export default {
-  async fetch(request: Request): Promise<Response> {
+  async fetch(request) {
     // Enable CORS for frontend and backend
     if (request.method === 'OPTIONS') {
       return new Response(null, {
@@ -49,7 +49,7 @@ export default {
         status: response.status,
         headers: responseHeaders,
       });
-    } catch (err: unknown) {
+    } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       return new Response(JSON.stringify({ error: 'Edge fetch failed', details: msg }), {
         status: 502,

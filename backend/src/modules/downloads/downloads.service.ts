@@ -65,10 +65,12 @@ function runYtDlp(args: string[]): Promise<string> {
 export const downloadsService = {
   async fetchMetadata(url: string): Promise<YtDlpInfo> {
     const isPlaylist = isPlaylistUrl(url);
+    const proxy = process.env.PROXY_URL || process.env.YOUTUBE_PROXY;
     const antiBlockFlags = [
       '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
       '--extractor-args', 'youtube:player_client=android,web;player_skip=configs',
       '--no-check-certificates',
+      ...(proxy ? ['--proxy', proxy] : []),
     ];
 
     try {
