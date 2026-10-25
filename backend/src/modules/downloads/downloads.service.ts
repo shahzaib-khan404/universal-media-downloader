@@ -71,27 +71,109 @@ export const downloadsService = {
       '--no-check-certificates',
     ];
 
-    if (isPlaylist) {
+    try {
+      if (isPlaylist) {
+        const json = await runYtDlp([
+          ...antiBlockFlags,
+          '--flat-playlist',
+          '--dump-single-json',
+          '--js-runtimes', 'node',
+          '--', url,
+        ]);
+        const data = JSON.parse(json) as YtDlpInfo;
+        data.is_playlist = true;
+        return data;
+      }
+
       const json = await runYtDlp([
         ...antiBlockFlags,
-        '--flat-playlist',
-        '--dump-single-json',
+        '--dump-json',
+        '--no-playlist',
         '--js-runtimes', 'node',
         '--', url,
       ]);
-      const data = JSON.parse(json) as YtDlpInfo;
-      data.is_playlist = true;
-      return data;
-    }
+      return JSON.parse(json) as YtDlpInfo;
+    } catch (err: unknown) {
+      const errStr = err instanceof Error ? err.message : String(err);
+      console.warn('[yt-dlp blocked or failed, attempting Invidious/Piped mirror fallback]:', errStr);
 
-    const json = await runYtDlp([
-      ...antiBlockFlags,
-      '--dump-json',
-      '--no-playlist',
-      '--js-runtimes', 'node',
-      '--', url,
-    ]);
-    return JSON.parse(json) as YtDlpInfo;
+      // Extract YouTube Video ID
+      const videoIdMatch = url.match(/(?:youtu\.be\/|v=|\/embed\/|\/live\/|\/shorts\/)([a-zA-Z0-9_-]{11})/);
+      if (videoIdMatch && videoIdMatch[1]) {
+        const id = videoIdMatch[1];
+        const instances = [
+          `https://api.invidious.io/api/v1/videos/${id}`,
+          `https://pipedapi.kavin.rocks/streams/${id}`,
+          `https://invidious.nerdvpn.de/api/v1/videos/${id}`,
+          `https://inv.nadeko.net/api/v1/videos/${id}`,
+        ];
+
+        for (const endpoint of instances) {
+          try {
+            const resp = await fetch(endpoint, {
+              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+              signal: AbortSignal.timeout(6000),
+            });
+            if (resp.ok) {
+              const inv = (await resp.json()) as any;
+              const title = inv.title ?? 'YouTube Video';
+              const formats: Array<{
+                format_id: string;
+                ext: string;
+                height?: number;
+                width?: number;
+                vcodec?: string;
+                acodec?: string;
+                fps?: number;
+              }> = [];
+
+              // Map formatStreams or videoStreams
+              const streamList = inv.formatStreams || inv.videoStreams || [];
+              for (const s of streamList) {
+                const h = parseInt(s.quality || s.resolution || '720', 10);
+                if (h > 0) {
+                  formats.push({
+                    format_id: s.itag ? String(s.itag) : `${h}p`,
+                    ext: s.container || s.mimeType?.includes('webm') ? 'webm' : 'mp4',
+                    height: h,
+                    width: Math.round((h * 16) / 9),
+                    vcodec: s.codec || 'h264',
+                    acodec: 'aac',
+                    fps: s.fps || 30,
+                  });
+                }
+              }
+
+              // Ensure at least standard standard fallback resolutions exist
+              if (formats.length === 0) {
+                formats.push(
+                  { format_id: '1080p', ext: 'mp4', height: 1080, width: 1920, vcodec: 'h264', acodec: 'aac', fps: 30 },
+                  { format_id: '720p', ext: 'mp4', height: 720, width: 1280, vcodec: 'h264', acodec: 'aac', fps: 30 },
+                  { format_id: '480p', ext: 'mp4', height: 480, width: 854, vcodec: 'h264', acodec: 'aac', fps: 30 },
+                  { format_id: '360p', ext: 'mp4', height: 360, width: 640, vcodec: 'h264', acodec: 'aac', fps: 30 }
+                );
+              }
+
+              return {
+                title,
+                channel: inv.author ?? inv.uploader ?? 'Artist',
+                uploader: inv.author ?? inv.uploader ?? 'Artist',
+                duration: inv.lengthSeconds ?? 0,
+                thumbnail: inv.videoThumbnails?.[0]?.url ?? `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+                webpage_url: url,
+                extractor: 'youtube',
+                formats,
+              };
+            }
+          } catch {
+            // try next mirror
+          }
+        }
+      }
+
+      // If all mirrors fail, rethrow original error
+      throw err;
+    }
   },
 
   buildQualityOptions(info: YtDlpInfo) {
