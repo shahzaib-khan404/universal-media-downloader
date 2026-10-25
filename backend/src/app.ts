@@ -59,6 +59,12 @@ export async function buildApp() {
   app.register(authRoutes, { prefix: '/api/auth' });
   app.register(downloadsRoutes, { prefix: '/api/downloads' });
 
+  app.get('/health', async () => ({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    version: '0.1.0',
+  }));
+
   app.get('/api/health', async () => ({
     status: 'ok',
     timestamp: new Date().toISOString(),
