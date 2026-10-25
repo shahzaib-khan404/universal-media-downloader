@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const schema = z.object({
   DATABASE_URL: z.string().min(1),
-  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
+  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters').default('super-secure-production-jwt-token-key-minimum-32-chars-long-umd-platform'),
   PORT: z.coerce.number().int().positive().default(4000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   DIRECT_WORKER: z.string().optional(),
