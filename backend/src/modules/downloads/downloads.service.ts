@@ -65,14 +65,32 @@ function runYtDlp(args: string[]): Promise<string> {
 export const downloadsService = {
   async fetchMetadata(url: string): Promise<YtDlpInfo> {
     const isPlaylist = isPlaylistUrl(url);
+    const antiBlockFlags = [
+      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+      '--extractor-args', 'youtube:player_client=android,web;player_skip=configs',
+      '--no-check-certificates',
+    ];
+
     if (isPlaylist) {
-      const json = await runYtDlp(['--flat-playlist', '--dump-single-json', '--js-runtimes', 'node', '--', url]);
+      const json = await runYtDlp([
+        ...antiBlockFlags,
+        '--flat-playlist',
+        '--dump-single-json',
+        '--js-runtimes', 'node',
+        '--', url,
+      ]);
       const data = JSON.parse(json) as YtDlpInfo;
       data.is_playlist = true;
       return data;
     }
 
-    const json = await runYtDlp(['--dump-json', '--no-playlist', '--js-runtimes', 'node', '--', url]);
+    const json = await runYtDlp([
+      ...antiBlockFlags,
+      '--dump-json',
+      '--no-playlist',
+      '--js-runtimes', 'node',
+      '--', url,
+    ]);
     return JSON.parse(json) as YtDlpInfo;
   },
 
