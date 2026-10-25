@@ -23,7 +23,8 @@ async function proxyToBackend(req: NextRequest, path: string[]) {
   const upstream = await fetch(backendUrl, init);
 
   // Stream SSE responses without buffering
-  if (upstream.headers.get('content-type')?.includes('text/event-stream')) {
+  const contentTypeHeader = upstream.headers.get('content-type') || '';
+  if (contentTypeHeader.includes('text/event-stream')) {
     return new NextResponse(upstream.body, {
       status: upstream.status,
       headers: {
@@ -31,6 +32,21 @@ async function proxyToBackend(req: NextRequest, path: string[]) {
         'Cache-Control': 'no-cache',
         Connection: 'keep-alive',
       },
+    });
+  }
+
+  // Forward files / binary streams with original Content-Disposition filename
+  const contentDisposition = upstream.headers.get('content-disposition');
+  if (contentDisposition || !contentTypeHeader.includes('application/json')) {
+    const responseHeaders = new Headers();
+    if (contentDisposition) responseHeaders.set('Content-Disposition', contentDisposition);
+    if (contentTypeHeader) responseHeaders.set('Content-Type', contentTypeHeader);
+    const contentLength = upstream.headers.get('content-length');
+    if (contentLength) responseHeaders.set('Content-Length', contentLength);
+
+    return new NextResponse(upstream.body, {
+      status: upstream.status,
+      headers: responseHeaders,
     });
   }
 

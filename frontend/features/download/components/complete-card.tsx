@@ -21,6 +21,12 @@ export function CompleteCard({ job, thumbnail }: CompleteCardProps) {
   const fileUrl = `${API}/api/downloads/${job.id}/file`;
   const [copied, setCopied] = useState(false);
 
+  // Ensure file always has proper extension (.mp3 or .mp4)
+  const defaultExt = (job.codec?.toLowerCase().includes('mp3') || job.mediaFilename?.toLowerCase().endsWith('.mp3')) ? '.mp3' : '.mp4';
+  const downloadFilename = job.mediaFilename && job.mediaFilename.includes('.')
+    ? job.mediaFilename
+    : `${job.mediaFilename || job.id}${defaultExt}`;
+
   const handleShare = async () => {
     const shareUrl = job.url || fileUrl;
     const shareData = {
@@ -133,7 +139,7 @@ export function CompleteCard({ job, thumbnail }: CompleteCardProps) {
       {/* Action buttons */}
       <div className="flex w-full max-w-xl flex-col items-center gap-4">
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
-          <a href={fileUrl} download={job.mediaFilename || `${job.id}.mp4`} className="w-full sm:w-auto">
+          <a href={fileUrl} download={downloadFilename} className="w-full sm:w-auto">
             <button className="btn-3d-orange w-full sm:w-auto px-7 py-3.5 rounded-2xl font-bold text-white inline-flex items-center justify-center gap-2 shadow-md">
               <Download className="h-4 w-4" />
               Download
