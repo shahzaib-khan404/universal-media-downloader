@@ -37,9 +37,27 @@ export default function AlbumDownloaderPage() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="relative min-h-screen overflow-hidden">
+      {/* 3D Global Ambient Video Background */}
+      <div 
+        aria-hidden="true" 
+        className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+      >
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="h-full w-full object-cover"
+        >
+          <source src="/videos/Firstpage.mp4" type="video/mp4" />
+        </video>
+        {/* Subtle wash overlay to preserve text legibility */}
+        <div className="absolute inset-0 bg-[#F8FAFC]/20 backdrop-blur-[1px]" />
+      </div>
+
       <Navbar />
-      <main className="container mx-auto px-4 py-12 space-y-16">
+      <main className="container mx-auto px-4 py-12 space-y-16 relative z-10">
         {/* Hero Section */}
         <section className="flex flex-col items-center text-center pt-8 sm:pt-12">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-50 px-4 py-2 text-xs font-bold text-purple-700">
