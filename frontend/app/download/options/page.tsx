@@ -81,10 +81,10 @@ function OptionsContent() {
             <p className="text-xl font-bold text-red-600">Verification Required</p>
             <p className="mt-2 text-sm text-slate-700 font-medium">
               {fetchError.includes('429') || fetchError.includes('bot')
-                ? 'YouTube rate limited this request. Please complete the quick Cloudflare verification below to verify human origin and retry.'
+                ? 'YouTube rate limited this server IP. Please verify below or click Retry.'
                 : fetchError.includes('Sign in')
                 ? 'This video requires account access or public verification.'
-                : 'Connection interrupted. Verify below to reconnect with clean edge pipeline.'}
+                : fetchError}
             </p>
 
             {/* Cloudflare Turnstile Verification Widget */}
