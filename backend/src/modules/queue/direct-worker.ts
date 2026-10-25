@@ -121,11 +121,27 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
   const args: string[] = [
     '--newline',
     '--js-runtimes', 'node',
-    '--user-agent', 'Mozilla/5.0 (SmartHub; SMART-TV; U; Linux/SmartTV) AppleWebKit/538.1+ (KHTML, like Gecko) TV Safari/538.1+',
-    '--extractor-args', 'youtube:player_client=tv_embedded,android,web_safari;player_skip=configs,webpage',
+    '--extractor-args', 'youtube:player_client=android,ios,mweb,web_embedded',
     '--no-check-certificates',
     '--geo-bypass',
   ];
+
+  // Auto-detect cookies if provided via Render Secret Files or Environment Variable
+  const renderSecretCookies = '/etc/secrets/cookies.txt';
+  const customCookiesPath = process.env.COOKIES_PATH;
+  if (fs.existsSync(renderSecretCookies)) {
+    args.push('--cookies', renderSecretCookies);
+  } else if (customCookiesPath && fs.existsSync(customCookiesPath)) {
+    args.push('--cookies', customCookiesPath);
+  } else if (process.env.COOKIES_B64) {
+    try {
+      const decodedPath = path.join(DOWNLOAD_DIR, 'cookies.txt');
+      if (!fs.existsSync(decodedPath)) {
+        fs.writeFileSync(decodedPath, Buffer.from(process.env.COOKIES_B64, 'base64').toString('utf-8'));
+      }
+      args.push('--cookies', decodedPath);
+    } catch { /* ignore */ }
+  }
 
   let outputTemplate: string;
   if (isPlaylist) {
