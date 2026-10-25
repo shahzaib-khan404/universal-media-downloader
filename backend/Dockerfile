@@ -43,5 +43,5 @@ ENV NODE_ENV=production \
 
 EXPOSE 4000
 
-# Run migrations then start server
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
+# Push schema then start server
+CMD ["sh", "-c", "npx prisma db push && node dist/index.js"]

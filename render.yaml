@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: umd-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 4000
+      - key: NODE_ENV
+        value: production
+      - key: DIRECT_WORKER
+        value: "true"
+      - key: DOWNLOAD_DIR
+        value: /downloads
+      - key: DATABASE_URL
+        value: file:/downloads/dev.db
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: "*"
