@@ -66,6 +66,9 @@ function ProgressContent() {
       setJob(data);
       setPollErrors(0);
       setProgress(data.progress ?? 0);
+      const name = data.mediaFilename || data.mediaTitle || 'Download';
+      document.title = `(${data.progress ?? 0}%) ${name}`;
+
       if (data.status === 'completed') {
         if (pollId) clearInterval(pollId);
         const q = thumb ? `?thumb=${encodeURIComponent(thumb)}` : '';

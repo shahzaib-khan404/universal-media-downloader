@@ -140,13 +140,27 @@ export function HistoryTable() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [isWakingUp, setIsWakingUp] = useState(false);
 
-  const load = () => {
+  const load = (retryCount = 0) => {
     setLoading(true);
     listDownloadJobs()
-      .then(setJobs)
-      .catch(() => toast.error('Could not load download history.'))
-      .finally(() => setLoading(false));
+      .then((data) => {
+        setJobs(data);
+        setIsWakingUp(false);
+      })
+      .catch(() => {
+        if (retryCount < 2) {
+          setIsWakingUp(true);
+          setTimeout(() => load(retryCount + 1), 4000);
+        } else {
+          setIsWakingUp(false);
+          toast.error('Could not load download history. The server may still be booting.');
+        }
+      })
+      .finally(() => {
+        if (retryCount >= 2) setLoading(false);
+      });
   };
 
   const handleDeleted = (id: string) => setJobs((prev) => prev.filter((j) => j.id !== id));
@@ -167,6 +181,15 @@ export function HistoryTable() {
 
   return (
     <div className="overflow-hidden rounded-3xl bg-white border border-[#FF6B00]/30 shadow-lg">
+      {isWakingUp && (
+        <div className="bg-amber-500/10 border-b border-amber-500/20 px-5 py-2.5 text-xs text-amber-800 font-medium flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-amber-500 animate-ping" />
+            Waking up server instance... Connecting to your download history.
+          </span>
+          <RefreshCw className="h-3.5 w-3.5 text-amber-600 animate-spin" />
+        </div>
+      )}
       {/* Toolbar */}
       <div className="flex flex-col gap-4 border-b border-slate-200 p-5 sm:flex-row sm:items-center sm:justify-between bg-orange-50/30">
         <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-2xl bg-slate-100 border border-slate-200">
@@ -196,7 +219,7 @@ export function HistoryTable() {
             />
           </div>
           <button
-            onClick={load}
+            onClick={() => load(0)}
             className="rounded-2xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-sm"
             title="Refresh"
           >

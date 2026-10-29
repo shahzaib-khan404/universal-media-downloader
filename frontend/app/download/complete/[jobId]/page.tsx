@@ -19,7 +19,12 @@ function CompleteContent() {
 
   useEffect(() => {
     getCompletedJob(jobId)
-      .then(setJob)
+      .then((data) => {
+        setJob(data);
+        if (data.mediaFilename || data.mediaTitle) {
+          document.title = `${data.mediaFilename || data.mediaTitle} — Ready`;
+        }
+      })
       .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
         setError(msg.includes('not yet completed') ? 'This download is not ready yet.' : 'Could not load download details. The file may have expired.');

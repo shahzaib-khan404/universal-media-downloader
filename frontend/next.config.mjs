@@ -42,6 +42,20 @@ const nextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' https://fonts.gstatic.com data:",
+              "img-src 'self' data: blob: https://i.ytimg.com https://img.youtube.com https://noembed.com https://*.ytimg.com https://*.sndcdn.com https://*.vimeocdn.com https://*.cdninstagram.com https://*.fbcdn.net https://*.tiktokcdn.com https://*",
+              "media-src 'self' blob: data:",
+              "connect-src 'self' https://* http://* wss://* ws://*",
+              "frame-src 'none'",
+              "object-src 'none'",
+            ].join('; '),
+          },
         ],
       },
     ];
