@@ -163,7 +163,8 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
     outputTemplate = path.join(jobFolder, '%(playlist_index)02d - %(title)s.%(ext)s');
     args.push('-o', outputTemplate, '--yes-playlist');
   } else {
-    outputTemplate = path.join(DOWNLOAD_DIR, `${jobId}.%(ext)s`);
+    // Include the actual song/video title in the filename
+    outputTemplate = path.join(DOWNLOAD_DIR, `${jobId}___%(title).150B.%(ext)s`);
     args.push('-o', outputTemplate, '--no-playlist');
   }
 
@@ -272,8 +273,9 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
   } else {
     // Locate single output file
     const files = fs.readdirSync(DOWNLOAD_DIR).filter((f) => f.startsWith(jobId) && !f.endsWith('.tmp'));
-    fileName = files[0] ?? `${jobId}.${audioOnly ? 'mp3' : 'mp4'}`;
-    localPath = path.join(DOWNLOAD_DIR, fileName);
+    const diskFileName = files[0] ?? `${jobId}.${audioOnly ? 'mp3' : 'mp4'}`;
+    fileName = diskFileName.includes('___') ? diskFileName.split('___').slice(1).join('___') : diskFileName;
+    localPath = path.join(DOWNLOAD_DIR, diskFileName);
 
     if (!audioOnly && localPath.endsWith('.mp4')) {
       const { codec: videoCodec, durationSeconds } = await getVideoInfo(localPath);
@@ -294,7 +296,7 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
   }
 
   const storage = getStorage();
-  const storageKey = await storage.save(localPath, fileName);
+  const storageKey = await storage.save(localPath, path.basename(localPath));
   const sizeBytes = await storage.sizeBytes(storageKey);
 
   await prisma.downloadResult.create({
