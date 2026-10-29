@@ -21,6 +21,7 @@ model User {
 model DownloadJob {
   id        String          @id @default(uuid())
   userId    String?
+  visitorId String?
   sourceUrl String
   qualityId String          @default("best")
   audioOnly Boolean         @default(false)

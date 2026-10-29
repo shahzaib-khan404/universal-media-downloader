@@ -90,13 +90,16 @@ export const downloadsController = {
     try { await request.jwtVerify(); } catch { /* anonymous download — no user attached */ }
     const user = request.user as { id: string } | undefined;
     const visitorId = (request as unknown as Record<string, unknown>).visitorId as string | undefined;
-    const ownerId = user?.id || visitorId;
 
     // Rate limiting / concurrency cap: max 3 active jobs per visitor/user
-    if (ownerId) {
+    const activeCondition: Array<{ userId?: string; visitorId?: string }> = [];
+    if (user?.id) activeCondition.push({ userId: user.id });
+    if (visitorId) activeCondition.push({ visitorId });
+
+    if (activeCondition.length > 0) {
       const activeJobsCount = await prisma.downloadJob.count({
         where: {
-          userId: ownerId,
+          OR: activeCondition,
           status: { in: ['queued', 'downloading', 'processing'] },
         },
       });
@@ -114,7 +117,8 @@ export const downloadsController = {
         sourceUrl: payload.url,
         qualityId: payload.qualityId,
         audioOnly: payload.audioOnly,
-        userId: ownerId,
+        userId: user?.id,
+        visitorId,
       });
       return reply.status(201).send({ jobId: job.id, status: job.status });
     } catch (err: unknown) {
@@ -128,10 +132,9 @@ export const downloadsController = {
     try { await request.jwtVerify(); } catch { /* anonymous */ }
     const user = request.user as { id: string } | undefined;
     const visitorId = (request as unknown as Record<string, unknown>).visitorId as string | undefined;
-    const ownerId = user?.id || visitorId;
 
     try {
-      const job = await downloadsService.getJob(id, ownerId);
+      const job = await downloadsService.getJob(id, { userId: user?.id, visitorId });
       return reply.send(job);
     } catch (err: unknown) {
       const e = err as { message: string; statusCode?: number };
@@ -143,9 +146,8 @@ export const downloadsController = {
     try { await request.jwtVerify(); } catch { /* anonymous */ }
     const user = request.user as { id: string } | undefined;
     const visitorId = (request as unknown as Record<string, unknown>).visitorId as string | undefined;
-    const ownerId = user?.id || visitorId;
 
-    const jobs = await downloadsService.listJobs(ownerId);
+    const jobs = await downloadsService.listJobs({ userId: user?.id, visitorId });
     return reply.send(jobs);
   },
 
@@ -192,12 +194,17 @@ export const downloadsController = {
     try { await request.jwtVerify(); } catch { /* anonymous */ }
     const user = request.user as { id: string } | undefined;
     const visitorId = (request as unknown as Record<string, unknown>).visitorId as string | undefined;
-    const ownerId = user?.id || visitorId;
 
     // Verify job exists and belongs to the caller (Return 404 to prevent ID probing)
     const job = await prisma.downloadJob.findUnique({ where: { id } });
     if (!job) return reply.status(404).send({ message: 'File not found' });
-    if (ownerId && job.userId && job.userId !== ownerId) {
+
+    const isOwner =
+      (!job.userId && !job.visitorId) ||
+      (user?.id && job.userId === user.id) ||
+      (visitorId && job.visitorId === visitorId);
+
+    if (!isOwner) {
       return reply.status(404).send({ message: 'File not found' });
     }
 
@@ -246,10 +253,9 @@ export const downloadsController = {
     try { await request.jwtVerify(); } catch { /* anonymous */ }
     const user = request.user as { id: string } | undefined;
     const visitorId = (request as unknown as Record<string, unknown>).visitorId as string | undefined;
-    const ownerId = user?.id || visitorId;
 
     try {
-      await downloadsService.deleteJob(id, ownerId);
+      await downloadsService.deleteJob(id, { userId: user?.id, visitorId });
       return reply.status(204).send();
     } catch (err: unknown) {
       const e = err as { message: string; statusCode?: number };
