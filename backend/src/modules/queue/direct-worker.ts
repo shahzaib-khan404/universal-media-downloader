@@ -120,7 +120,7 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
 
   const args: string[] = [
     '--newline',
-    '--js-runtimes', 'node',
+    '--js-runtimes', 'deno,node',
     '--remote-components', 'ejs:github',
     '--extractor-args', 'youtube:player_client=android,ios,web,mweb;formats=missing_pot',
     '--no-check-certificates',

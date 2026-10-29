@@ -97,7 +97,7 @@ export const downloadsService = {
           ...antiBlockFlags,
           '--flat-playlist',
           '--dump-single-json',
-          '--js-runtimes', 'node',
+          '--js-runtimes', 'deno,node',
           '--', url,
         ]);
         const data = JSON.parse(json) as YtDlpInfo;
@@ -109,7 +109,7 @@ export const downloadsService = {
         ...antiBlockFlags,
         '--dump-json',
         '--no-playlist',
-        '--js-runtimes', 'node',
+        '--js-runtimes', 'deno,node',
         '--', url,
       ]);
       return JSON.parse(json) as YtDlpInfo;
