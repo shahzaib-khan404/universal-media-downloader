@@ -79,7 +79,14 @@ export const downloadsService = {
     const downloadDir = process.env.DOWNLOAD_DIR || '/downloads';
     const writableCookiesPath = path.join(downloadDir, 'cookies.txt');
     const renderSecretCookies = '/etc/secrets/cookies.txt';
-    if (fs.existsSync(renderSecretCookies)) {
+
+    if (process.env.COOKIES_B64) {
+      try {
+        if (!fs.existsSync(downloadDir)) fs.mkdirSync(downloadDir, { recursive: true });
+        fs.writeFileSync(writableCookiesPath, Buffer.from(process.env.COOKIES_B64, 'base64').toString('utf-8'));
+        antiBlockFlags.push('--cookies', writableCookiesPath);
+      } catch { /* ignore */ }
+    } else if (fs.existsSync(renderSecretCookies)) {
       try {
         if (!fs.existsSync(downloadDir)) fs.mkdirSync(downloadDir, { recursive: true });
         fs.copyFileSync(renderSecretCookies, writableCookiesPath);
@@ -97,7 +104,7 @@ export const downloadsService = {
           ...antiBlockFlags,
           '--flat-playlist',
           '--dump-single-json',
-          '--js-runtimes', 'deno,node',
+          '--js-runtimes', 'node',
           '--', url,
         ]);
         const data = JSON.parse(json) as YtDlpInfo;
@@ -109,7 +116,7 @@ export const downloadsService = {
         ...antiBlockFlags,
         '--dump-json',
         '--no-playlist',
-        '--js-runtimes', 'deno,node',
+        '--js-runtimes', 'node',
         '--', url,
       ]);
       return JSON.parse(json) as YtDlpInfo;
