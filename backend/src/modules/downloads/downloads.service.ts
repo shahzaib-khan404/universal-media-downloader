@@ -71,7 +71,7 @@ export const downloadsService = {
     // TVHTML5_SIMPLY_EMBEDDED_PLAYER and Android VR are immune to YouTube's "Sign in to confirm you're not a bot" challenge
     const antiBlockFlags = [
       '--remote-components', 'ejs:github',
-      '--extractor-args', 'youtube:player_client=android,ios,web,mweb;formats=missing_pot',
+      '--extractor-args', 'youtube:player_client=default,-tv;formats=missing_pot',
       '--no-check-certificates',
       '--geo-bypass',
     ];
