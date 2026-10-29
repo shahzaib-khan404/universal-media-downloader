@@ -12,6 +12,8 @@ async function proxyToBackend(req: NextRequest, path: string[]) {
   if (contentType) forwardHeaders.set('content-type', contentType);
   const auth = req.headers.get('authorization');
   if (auth) forwardHeaders.set('authorization', auth);
+  const cookieHeader = req.headers.get('cookie');
+  if (cookieHeader) forwardHeaders.set('cookie', cookieHeader);
 
   const init: RequestInit = { method: req.method, headers: forwardHeaders };
 
@@ -73,11 +75,14 @@ async function proxyToBackend(req: NextRequest, path: string[]) {
   }
 
   const body = await upstream.text();
+  const responseHeaders = new Headers();
+  responseHeaders.set('Content-Type', upstream.headers.get('content-type') ?? 'application/json');
+  const setCookie = upstream.headers.get('set-cookie');
+  if (setCookie) responseHeaders.set('set-cookie', setCookie);
+
   return new NextResponse(body, {
     status: upstream.status,
-    headers: {
-      'Content-Type': upstream.headers.get('content-type') ?? 'application/json',
-    },
+    headers: responseHeaders,
   });
 }
 

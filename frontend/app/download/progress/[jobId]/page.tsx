@@ -76,20 +76,24 @@ function ProgressContent() {
       }
     };
 
-    // 1. Instant SSE updates
+    let sseActive = false;
+
+    // 1. Instant SSE updates (Primary stream)
     const unsubscribeSSE = subscribeJobUpdates(
       jobId,
       (data) => {
+        sseActive = true;
         if (!paused) handleUpdate(data);
       },
       () => {
-        // SSE disconnected, polling continues
+        // SSE disconnected, fallback polling takes over
+        sseActive = false;
       }
     );
 
-    // 2. High-frequency 500ms poll to ensure the ring and stream metrics stay synchronized in real time
+    // 2. Low-frequency fallback poll (every 4000ms) only if SSE is not active
     pollId = setInterval(async () => {
-      if (paused) return;
+      if (paused || sseActive) return;
       try {
         const data = await getDownloadJob(jobId);
         handleUpdate(data);
@@ -103,9 +107,9 @@ function ProgressContent() {
           return next;
         });
       }
-    }, 500);
+    }, 4000);
 
-    // Initial check
+    // Initial check (runs once on load)
     getDownloadJob(jobId).then(handleUpdate).catch(() => {});
 
     return () => {

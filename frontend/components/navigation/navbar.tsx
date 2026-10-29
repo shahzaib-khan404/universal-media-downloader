@@ -75,7 +75,7 @@ export function Navbar() {
         {/* Right CTA Actions */}
         <div className="flex items-center gap-3">
           <Link
-            href="/download"
+            href="/"
             className="hidden sm:inline-flex btn-3d-orange items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold text-white uppercase tracking-wider"
           >
             <Sparkles className="h-3.5 w-3.5 fill-white" />
@@ -116,7 +116,7 @@ export function Navbar() {
             })}
             <div className="mt-4 pt-3 border-t border-slate-200">
               <Link
-                href="/download"
+                href="/"
                 className="w-full block btn-3d-orange rounded-2xl py-3 text-center text-xs font-bold text-white uppercase tracking-wider"
               >
                 Quick Start

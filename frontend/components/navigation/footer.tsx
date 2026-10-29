@@ -6,18 +6,18 @@ export function Footer() {
       <div className="container mx-auto flex flex-col gap-4 text-xs text-slate-500 font-medium sm:flex-row sm:items-center sm:justify-between">
         <p>© 2026 Universal Media Downloader. Built for performance.</p>
         <div className="flex flex-wrap gap-4">
-          <Link href="#" className="hover:text-slate-900 transition-colors">
+          <Link href="/privacy" className="hover:text-slate-900 transition-colors">
             Privacy Policy
           </Link>
-          <Link href="#" className="hover:text-slate-900 transition-colors">
+          <Link href="/terms" className="hover:text-slate-900 transition-colors">
             Terms of Service
           </Link>
-          <Link href="#" className="hover:text-slate-900 transition-colors">
+          <a href="/api/health" target="_blank" rel="noopener noreferrer" className="hover:text-slate-900 transition-colors">
             Status
-          </Link>
-          <Link href="#" className="hover:text-slate-900 transition-colors">
+          </a>
+          <a href="mailto:support@universal-media-downloader.com" className="hover:text-slate-900 transition-colors">
             Contact
-          </Link>
+          </a>
         </div>
       </div>
     </footer>

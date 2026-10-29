@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
@@ -21,9 +22,18 @@ export async function buildApp() {
 
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(cors, {
-    origin: getAllowedOrigins(),
+    origin: (origin, cb) => {
+      // In dev or when no origin header (like server-to-server), allow
+      if (!origin) return cb(null, true);
+      if (!env.ALLOWED_ORIGINS) return cb(null, true);
+      const origins = env.ALLOWED_ORIGINS.split(',').map((o) => o.trim());
+      if (origins.includes('*') || origins.includes(origin)) {
+        return cb(null, true);
+      }
+      return cb(null, false);
+    },
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   });
 
@@ -49,6 +59,24 @@ export async function buildApp() {
   });
 
   await app.register(cookie);
+
+  // Issue anonymous visitor ID cookie on first visit to isolate user history (P0 Security)
+  app.addHook('preHandler', async (request, reply) => {
+    let visitorId = request.cookies.umd_vid;
+    if (!visitorId) {
+      visitorId = crypto.randomUUID();
+      reply.setCookie('umd_vid', visitorId, {
+        path: '/',
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+      });
+    }
+    // Attach to request context
+    (request as unknown as Record<string, unknown>).visitorId = visitorId;
+  });
+
   await app.register(jwt, {
     secret: env.JWT_SECRET ?? 'fallback-secret-change-me',
     cookie: { cookieName: 'auth_token', signed: false },

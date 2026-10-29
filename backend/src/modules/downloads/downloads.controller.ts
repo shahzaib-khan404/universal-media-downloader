@@ -35,13 +35,25 @@ export const downloadsController = {
         ? { quality: defaultPlaylistQuality, audio: defaultPlaylistAudio }
         : downloadsService.buildQualityOptions(info);
 
+      // Format upload_date (e.g., 20050424 -> 24 Apr 2005)
+      let formattedDate: string | null = null;
+      if (info.upload_date && /^\d{8}$/.test(info.upload_date)) {
+        const y = info.upload_date.slice(0, 4);
+        const m = info.upload_date.slice(4, 6);
+        const d = info.upload_date.slice(6, 8);
+        const dateObj = new Date(`${y}-${m}-${d}`);
+        if (!isNaN(dateObj.getTime())) {
+          formattedDate = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+      }
+
       return reply.send({
-        id: info.extractor ?? 'unknown',
+        id: info.id ?? info.extractor ?? 'unknown',
         title: info.title ?? 'Untitled',
         channel: info.channel ?? info.uploader ?? 'Unknown',
         platform: info.extractor ?? 'unknown',
         views: info.view_count ?? 0,
-        uploadedAt: info.upload_date ?? null,
+        uploadedAt: formattedDate ?? info.upload_date ?? null,
         thumbnail: info.thumbnail ?? null,
         duration: info.duration ?? 0,
         isPlaylist,
@@ -76,14 +88,16 @@ export const downloadsController = {
 
     // Optionally extract the authenticated user so the job is attributed to them
     try { await request.jwtVerify(); } catch { /* anonymous download — no user attached */ }
+    const user = request.user as { id: string } | undefined;
+    const visitorId = (request as unknown as Record<string, unknown>).visitorId as string | undefined;
+    const ownerId = user?.id || visitorId;
 
     try {
-      const user = request.user as { id: string } | undefined;
       const job = await downloadsService.enqueueDownload({
         sourceUrl: payload.url,
         qualityId: payload.qualityId,
         audioOnly: payload.audioOnly,
-        userId: user?.id,
+        userId: ownerId,
       });
       return reply.status(201).send({ jobId: job.id, status: job.status });
     } catch (err: unknown) {
@@ -94,8 +108,13 @@ export const downloadsController = {
 
   getJob: async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
+    try { await request.jwtVerify(); } catch { /* anonymous */ }
+    const user = request.user as { id: string } | undefined;
+    const visitorId = (request as unknown as Record<string, unknown>).visitorId as string | undefined;
+    const ownerId = user?.id || visitorId;
+
     try {
-      const job = await downloadsService.getJob(id);
+      const job = await downloadsService.getJob(id, ownerId);
       return reply.send(job);
     } catch (err: unknown) {
       const e = err as { message: string; statusCode?: number };
@@ -106,7 +125,10 @@ export const downloadsController = {
   listJobs: async (request: FastifyRequest, reply: FastifyReply) => {
     try { await request.jwtVerify(); } catch { /* anonymous */ }
     const user = request.user as { id: string } | undefined;
-    const jobs = await downloadsService.listJobs(user?.id);
+    const visitorId = (request as unknown as Record<string, unknown>).visitorId as string | undefined;
+    const ownerId = user?.id || visitorId;
+
+    const jobs = await downloadsService.listJobs(ownerId);
     return reply.send(jobs);
   },
 
@@ -129,7 +151,7 @@ export const downloadsController = {
 
     // Send current job state immediately so client doesn't wait
     const current = await prisma.downloadJob.findUnique({ where: { id }, include: { result: true } });
-    if (current) send(current);
+    if (current) send(downloadsService.sanitizeJob(current));
 
     const unsubscribe = subscribeToJob(id, send);
 
@@ -150,6 +172,18 @@ export const downloadsController = {
 
   serveFile: async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
+    try { await request.jwtVerify(); } catch { /* anonymous */ }
+    const user = request.user as { id: string } | undefined;
+    const visitorId = (request as unknown as Record<string, unknown>).visitorId as string | undefined;
+    const ownerId = user?.id || visitorId;
+
+    // Verify job exists and belongs to the caller (Return 404 to prevent ID probing)
+    const job = await prisma.downloadJob.findUnique({ where: { id } });
+    if (!job) return reply.status(404).send({ message: 'File not found' });
+    if (ownerId && job.userId && job.userId !== ownerId) {
+      return reply.status(404).send({ message: 'File not found' });
+    }
+
     const result = await prisma.downloadResult.findUnique({ where: { jobId: id } });
     if (!result) return reply.status(404).send({ message: 'File not found' });
 
@@ -192,9 +226,13 @@ export const downloadsController = {
 
   deleteJob: async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
+    try { await request.jwtVerify(); } catch { /* anonymous */ }
     const user = request.user as { id: string } | undefined;
+    const visitorId = (request as unknown as Record<string, unknown>).visitorId as string | undefined;
+    const ownerId = user?.id || visitorId;
+
     try {
-      await downloadsService.deleteJob(id, user?.id);
+      await downloadsService.deleteJob(id, ownerId);
       return reply.status(204).send();
     } catch (err: unknown) {
       const e = err as { message: string; statusCode?: number };

@@ -14,6 +14,7 @@ export interface PlaylistEntry {
 }
 
 export interface YtDlpInfo {
+  id?: string;
   _type?: string;
   title?: string;
   channel?: string;
@@ -288,29 +289,78 @@ export const downloadsService = {
     return job;
   },
 
-  async getJob(id: string) {
+  sanitizeJob(job: {
+    id: string;
+    userId: string | null;
+    sourceUrl: string;
+    qualityId: string;
+    audioOnly: boolean;
+    status: string;
+    progress: number;
+    speed: string | null;
+    eta: string | null;
+    error: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    result?: {
+      fileName: string;
+      fileSizeBytes: number | null;
+      resolution: string | null;
+      codec: string | null;
+      completedAt: Date;
+    } | null;
+  }) {
+    return {
+      id: job.id,
+      sourceUrl: job.sourceUrl,
+      qualityId: job.qualityId,
+      audioOnly: job.audioOnly,
+      status: job.status,
+      progress: job.progress,
+      speed: job.speed,
+      eta: job.eta,
+      error: job.error,
+      createdAt: job.createdAt,
+      updatedAt: job.updatedAt,
+      result: job.result ? {
+        fileName: job.result.fileName,
+        fileSizeBytes: job.result.fileSizeBytes,
+        resolution: job.result.resolution,
+        codec: job.result.codec,
+        completedAt: job.result.completedAt,
+      } : null,
+    };
+  },
+
+  async getJob(id: string, ownerId?: string) {
     const job = await prisma.downloadJob.findUnique({
       where: { id },
       include: { result: true },
     });
+    // Return 404 (not 403) so IDs can't be probed
     if (!job) throw Object.assign(new Error('Job not found'), { statusCode: 404 });
-    return job;
+    if (ownerId && job.userId && job.userId !== ownerId) {
+      throw Object.assign(new Error('Job not found'), { statusCode: 404 });
+    }
+    return this.sanitizeJob(job);
   },
 
-  async listJobs(userId?: string) {
-    return prisma.downloadJob.findMany({
-      where: userId ? { userId } : {},
+  async listJobs(ownerId?: string) {
+    if (!ownerId) return [];
+    const jobs = await prisma.downloadJob.findMany({
+      where: { userId: ownerId },
       orderBy: { createdAt: 'desc' },
       take: 50,
       include: { result: true },
     });
+    return jobs.map((j) => this.sanitizeJob(j));
   },
 
-  async deleteJob(id: string, userId?: string) {
+  async deleteJob(id: string, ownerId?: string) {
     const job = await prisma.downloadJob.findUnique({ where: { id } });
     if (!job) throw Object.assign(new Error('Job not found'), { statusCode: 404 });
-    if (userId && job.userId !== userId) {
-      throw Object.assign(new Error('Forbidden'), { statusCode: 403 });
+    if (ownerId && job.userId && job.userId !== ownerId) {
+      throw Object.assign(new Error('Job not found'), { statusCode: 404 });
     }
     await prisma.downloadResult.deleteMany({ where: { jobId: id } });
     await prisma.downloadJob.delete({ where: { id } });

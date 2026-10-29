@@ -4,10 +4,7 @@ function url(path: string) {
   return API_BASE ? `${API_BASE}/api${path}` : `/api${path}`;
 }
 
-// Tells ngrok to skip its browser-warning interstitial for API fetch calls
-const BASE_HEADERS: HeadersInit = {
-  'ngrok-skip-browser-warning': 'true',
-};
+const BASE_HEADERS: HeadersInit = {};
 
 async function throwWithBody(res: Response, method: string, path: string): Promise<never> {
   let reason = '';
