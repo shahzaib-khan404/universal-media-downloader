@@ -92,6 +92,23 @@ export const downloadsController = {
     const visitorId = (request as unknown as Record<string, unknown>).visitorId as string | undefined;
     const ownerId = user?.id || visitorId;
 
+    // Rate limiting / concurrency cap: max 3 active jobs per visitor/user
+    if (ownerId) {
+      const activeJobsCount = await prisma.downloadJob.count({
+        where: {
+          userId: ownerId,
+          status: { in: ['queued', 'downloading', 'processing'] },
+        },
+      });
+
+      const MAX_CONCURRENT_JOBS = 3;
+      if (activeJobsCount >= MAX_CONCURRENT_JOBS) {
+        return reply.status(429).send({
+          message: `Concurrency limit reached. You already have ${activeJobsCount} active download(s) in progress. Please wait for them to finish before adding more.`,
+        });
+      }
+    }
+
     try {
       const job = await downloadsService.enqueueDownload({
         sourceUrl: payload.url,

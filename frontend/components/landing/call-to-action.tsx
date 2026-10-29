@@ -18,7 +18,7 @@ export function CallToAction() {
         <div className="max-w-2xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-accent/40 bg-accent/15 px-3.5 py-1 text-xs font-bold text-[#FF5E00] mb-4 shadow-sm">
             <Flame className="h-4 w-4 fill-accent" />
-            Join 2.4M+ Power Archivers
+            High-Performance Media Extraction
           </div>
           <h2 className="text-3xl font-black text-slate-900 sm:text-4xl lg:text-5xl tracking-tight leading-tight">
             Ready to download media at <span className="text-[#FF5E00]">maximum speed</span>?
@@ -29,15 +29,15 @@ export function CallToAction() {
 
           <div className="mt-8 flex flex-wrap gap-8 sm:gap-12 pt-6 border-t border-[#FF6B00]/20">
             <div>
-              <p className="text-3xl font-black text-slate-900">240M+</p>
+              <p className="text-3xl font-black text-slate-900">1000+</p>
               <p className="text-[10px] font-extrabold uppercase tracking-widest text-[#FF5E00] mt-1">
-                Files Processed
+                Supported Sites
               </p>
             </div>
             <div>
-              <p className="text-3xl font-black text-slate-900">99.9%</p>
+              <p className="text-3xl font-black text-slate-900">320kbps</p>
               <p className="text-[10px] font-extrabold uppercase tracking-widest text-[#FF5E00] mt-1">
-                Conversion Success
+                Lossless Audio
               </p>
             </div>
             <div>
@@ -51,7 +51,7 @@ export function CallToAction() {
 
         <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0">
           <Link
-            href="/download"
+            href="/"
             className="btn-3d-orange inline-flex items-center justify-center gap-2 rounded-2xl px-8 py-4 text-sm font-extrabold text-white uppercase tracking-wider text-center"
           >
             <span>Start Downloading</span>

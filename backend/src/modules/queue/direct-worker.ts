@@ -11,6 +11,8 @@ if (!fs.existsSync(DOWNLOAD_DIR)) fs.mkdirSync(DOWNLOAD_DIR, { recursive: true }
 
 interface VideoInfo {
   codec: string | null;
+  audioCodec: string | null;
+  resolution: string | null;
   durationSeconds: number | null;
 }
 
@@ -24,13 +26,25 @@ function getVideoInfo(filePath: string): Promise<VideoInfo> {
     proc.stdout.on('data', (d: Buffer) => { out += d.toString(); });
     proc.on('close', () => {
       try {
-        const data = JSON.parse(out) as { streams: Array<{ codec_type: string; codec_name: string }>; format?: { duration?: string } };
+        const data = JSON.parse(out) as {
+          streams: Array<{ codec_type: string; codec_name: string; width?: number; height?: number }>;
+          format?: { duration?: string };
+        };
         const video = data.streams.find((s) => s.codec_type === 'video');
+        const audio = data.streams.find((s) => s.codec_type === 'audio');
         const dur = parseFloat(data.format?.duration ?? '0');
-        resolve({ codec: video?.codec_name ?? null, durationSeconds: dur > 0 ? dur : null });
-      } catch { resolve({ codec: null, durationSeconds: null }); }
+        const resolution = video?.width && video?.height ? `${video.width}×${video.height}` : null;
+        resolve({
+          codec: video?.codec_name ?? null,
+          audioCodec: audio?.codec_name ?? null,
+          resolution,
+          durationSeconds: dur > 0 ? dur : null,
+        });
+      } catch {
+        resolve({ codec: null, audioCodec: null, resolution: null, durationSeconds: null });
+      }
     });
-    proc.on('error', () => resolve({ codec: null, durationSeconds: null }));
+    proc.on('error', () => resolve({ codec: null, audioCodec: null, resolution: null, durationSeconds: null }));
   });
 }
 
@@ -277,8 +291,14 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
     fileName = diskFileName.includes('___') ? diskFileName.split('___').slice(1).join('___') : diskFileName;
     localPath = path.join(DOWNLOAD_DIR, diskFileName);
 
+    let finalCodec: string | null = null;
+    let finalResolution: string | null = null;
+
     if (!audioOnly && localPath.endsWith('.mp4')) {
-      const { codec: videoCodec, durationSeconds } = await getVideoInfo(localPath);
+      const { codec: videoCodec, resolution, durationSeconds } = await getVideoInfo(localPath);
+      finalCodec = videoCodec;
+      finalResolution = resolution;
+
       if (videoCodec === 'vp9' || videoCodec === 'av1') {
         console.log(`[direct-worker] ${videoCodec.toUpperCase()} detected — re-encoding to h264 (${durationSeconds?.toFixed(0) ?? '?'}s)`);
         const stillExists = await prisma.downloadJob.findUnique({ where: { id: jobId } });
@@ -289,10 +309,35 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
           await transcodeToH264(localPath, h264Path, jobId, durationSeconds);
           try { fs.unlinkSync(localPath); } catch { /* ignore */ }
           fs.renameSync(h264Path, localPath);
+          finalCodec = 'h264';
           console.log(`[direct-worker] Re-encode complete → ${fileName}`);
         }
       }
+    } else if (audioOnly) {
+      const { audioCodec } = await getVideoInfo(localPath);
+      finalCodec = audioCodec ?? (qualityId.includes('flac') ? 'flac' : 'mp3');
+      finalResolution = 'Audio';
     }
+
+    const storage = getStorage();
+    const storageKey = await storage.save(localPath, path.basename(localPath));
+    const sizeBytes = await storage.sizeBytes(storageKey);
+
+    await prisma.downloadResult.create({
+      data: {
+        jobId,
+        fileName,
+        storagePath: storageKey,
+        fileSizeBytes: sizeBytes,
+        resolution: finalResolution,
+        codec: finalCodec,
+      },
+    });
+    await prisma.downloadJob.update({ where: { id: jobId }, data: { status: 'completed', progress: 100 } });
+
+    emitJobUpdate({ id: jobId, status: 'completed', progress: 100, speed: null, eta: null, error: null });
+    console.log(`[direct-worker] ✓ Job ${jobId} → ${fileName} (${finalResolution ?? 'n/a'}, ${finalCodec ?? 'n/a'})`);
+    return;
   }
 
   const storage = getStorage();
@@ -300,7 +345,14 @@ async function runJob(jobId: string, sourceUrl: string, qualityId: string, audio
   const sizeBytes = await storage.sizeBytes(storageKey);
 
   await prisma.downloadResult.create({
-    data: { jobId, fileName, storagePath: storageKey, fileSizeBytes: sizeBytes },
+    data: {
+      jobId,
+      fileName,
+      storagePath: storageKey,
+      fileSizeBytes: sizeBytes,
+      resolution: 'Album ZIP',
+      codec: 'zip',
+    },
   });
   await prisma.downloadJob.update({ where: { id: jobId }, data: { status: 'completed', progress: 100 } });
 

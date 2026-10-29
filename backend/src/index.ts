@@ -6,6 +6,7 @@ import './lib/env';
 
 import { buildApp } from './app';
 import { startDirectWorker } from './modules/queue/direct-worker';
+import { startCleanupCron } from './lib/cleanup';
 import { env } from './lib/env';
 
 async function main() {
@@ -16,6 +17,9 @@ async function main() {
   if (process.env.DIRECT_WORKER !== 'false') {
     startDirectWorker();
   }
+
+  // Auto-prune files and records older than 24h
+  startCleanupCron();
 }
 
 main().catch((error) => {
