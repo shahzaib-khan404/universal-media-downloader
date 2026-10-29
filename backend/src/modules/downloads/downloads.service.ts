@@ -70,6 +70,7 @@ export const downloadsService = {
     // Industry standard client rotation (Smart TV & Android InnerTube)
     // TVHTML5_SIMPLY_EMBEDDED_PLAYER and Android VR are immune to YouTube's "Sign in to confirm you're not a bot" challenge
     const antiBlockFlags = [
+      '--remote-components', 'ejs:github',
       '--extractor-args', 'youtube:player_client=android,ios,web,mweb;formats=missing_pot',
       '--no-check-certificates',
       '--geo-bypass',

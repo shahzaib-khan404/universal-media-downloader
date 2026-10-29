@@ -20,9 +20,9 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Install yt-dlp + ffmpeg + openssl (required for Prisma and downloads)
+# Install yt-dlp[default] (includes EJS JavaScript challenge solver) + ffmpeg + openssl
 RUN apk add --no-cache python3 py3-pip ffmpeg openssl && \
-    pip3 install --break-system-packages yt-dlp
+    pip3 install --break-system-packages "yt-dlp[default]"
 
 # Production-only npm deps
 COPY package.json package-lock.json ./
