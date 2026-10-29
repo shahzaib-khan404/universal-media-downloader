@@ -94,23 +94,31 @@ function ProgressContent() {
       }
     );
 
-    // 2. Low-frequency fallback poll (every 4000ms) only if SSE is not active
+    // 2. Continuous safety poll (every 2500ms) with error threshold of 25 (over a minute of network disruption before showing failure)
     pollId = setInterval(async () => {
-      if (paused || sseActive) return;
+      if (paused) return;
       try {
         const data = await getDownloadJob(jobId);
         handleUpdate(data);
-      } catch {
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        // If the server explicitly returned 404, the job was deleted or expired
+        if (msg.includes('404')) {
+          if (pollId) clearInterval(pollId);
+          setFailedReason('Download job not found or has expired. Please try again.');
+          return;
+        }
+
         setPollErrors((n) => {
           const next = n + 1;
-          if (next >= 10 && pollId) {
+          if (next >= 25 && pollId) {
             clearInterval(pollId);
             setFailedReason('Lost connection to the server. Please check your connection and try again.');
           }
           return next;
         });
       }
-    }, 4000);
+    }, 2500);
 
     // Initial check (runs once on load)
     getDownloadJob(jobId).then(handleUpdate).catch(() => {});

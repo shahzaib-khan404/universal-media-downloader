@@ -43,9 +43,10 @@ ENV NODE_ENV=production \
     PORT=4000 \
     DOWNLOAD_DIR=/downloads \
     DIRECT_WORKER=true \
-    STORAGE_PROVIDER=local
+    STORAGE_PROVIDER=local \
+    NODE_OPTIONS="--max-old-space-size=350"
 
 EXPOSE 4000
 
-# Push schema then start server
-CMD ["sh", "-c", "npx prisma db push --skip-generate && node dist/index.js"]
+# Push schema then start server with memory cap to prevent Render 512MB OOM
+CMD ["sh", "-c", "npx prisma db push --skip-generate && node --max-old-space-size=350 dist/index.js"]

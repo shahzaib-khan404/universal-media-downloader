@@ -228,9 +228,10 @@ export function subscribeJobUpdates(
   onError?: (err: Error) => void
 ): () => void {
   // Try connecting via EventSource for instant zero-latency telemetry
-  const streamUrl = `/api/downloads/${jobId}/events`;
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
+  const streamUrl = API_BASE ? `${API_BASE}/api/downloads/${jobId}/events` : `/api/downloads/${jobId}/events`;
   try {
-    const es = new EventSource(streamUrl);
+    const es = new EventSource(streamUrl, { withCredentials: true });
     es.onmessage = (event) => {
       try {
         const raw = JSON.parse(event.data);
